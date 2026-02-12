@@ -511,12 +511,36 @@ exports.updatePrivateChargerStatus = async (req, res) => {
 
 exports.deleteChargerMedia = async (req, res) => {
     try {
-        const { mediaId } = req.params;
-        const media = await ChargerMedia.findByPk(mediaId);
-        if (!media) return res.status(404).json({ success: false, error: 'Media not found' });
+        const { id, mediaId } = req.params;
 
+        // Find the media record
+        const media = await ChargerMedia.findByPk(mediaId);
+
+        if (!media) {
+            return res.status(404).json({ success: false, error: 'Media record not found' });
+        }
+
+        // --- Validation: Ensure media belongs to the station in URL ---
+        // This prevents accidental/malicious deletion of images from other stations
+        if (media.charger_id !== id) {
+            return res.status(403).json({
+                success: false,
+                error: 'Authorization failed: This image does not belong to the specified charger station.'
+            });
+        }
+
+        // --- Cloud Storage Cleanup (Placeholder) ---
+        // Note: When Cloudflare integration is ready, we will add the 
+        // disk/bucket deletion logic here using the media.path or media.url.
+        // console.log(`[TODO] Delete physical file from Cloudflare: ${media.url}`);
+
+        // Remove from Database
         await media.destroy();
-        res.status(200).json({ success: true, message: 'Media deleted' });
+
+        res.status(200).json({
+            success: true,
+            message: 'Image successfully removed from the registry.'
+        });
     } catch (error) {
         console.error('Error deleting media:', error);
         res.status(500).json({ success: false, error: 'Server error' });
