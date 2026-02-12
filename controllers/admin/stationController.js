@@ -193,9 +193,10 @@ exports.updatePublicStation = async (req, res) => {
 
         const editableFields = [
             'station_name', 'street_address', 'status', 'online', 'pricing', 'access',
-            'total_ports', 'chademo', 'ccs', 'tesla', 'j1772', 'nema1450', 'nema515',
-            'chademo_power', 'ccs_power', 'tesla_power', 'j1772_power', 'latitude', 'longitude',
-            'station_image', 'network_type_id', 'facility_type_id'
+            'total_ports', 'level', 'chademo', 'ccs', 'tesla', 'j1772', 'nema1450',
+            'nema515', 'nema520', 'chademo_power', 'ccs_power', 'tesla_power',
+            'j1772_power', 'latitude', 'longitude', 'station_image',
+            'network_type_id', 'facility_type_id'
         ];
 
         editableFields.forEach(field => {
@@ -422,22 +423,65 @@ exports.getPrivateChargerById = async (req, res) => {
 
 // ... updatePrivateCharger and delete (keep existing) ...
 exports.updatePrivateCharger = async (req, res) => {
-    // ... kept same ...
     try {
         const { id } = req.params;
         const charger = await ChargerListing.findByPk(id);
 
         if (!charger) return res.status(404).json({ success: false, error: 'Charger not found' });
 
-        const editableFields = [
-            'title', 'description', 'address', 'pricePerHour', 'weekendPrice',
-            'connectorType', 'powerOutput', 'voltage', 'amperage',
-            'published', 'disabled', 'draft', 'deleted',
-            'access', 'facilities', 'amenities'
-        ];
+        const body = req.body;
 
-        editableFields.forEach(field => {
-            if (req.body[field] !== undefined) charger[field] = req.body[field];
+        // --- Handle Nested Structure (as per spec) ---
+
+        // 1. Identity & Status
+        if (body.identity) {
+            if (body.identity.title !== undefined) charger.title = body.identity.title;
+            if (body.identity.description !== undefined) charger.description = body.identity.description;
+            if (body.identity.status) {
+                if (body.identity.status.published !== undefined) charger.published = body.identity.status.published;
+                if (body.identity.status.disabled !== undefined) charger.disabled = body.identity.status.disabled;
+                if (body.identity.status.draft !== undefined) charger.draft = body.identity.status.draft;
+            }
+        }
+
+        // 2. Location
+        if (body.location) {
+            if (body.location.address !== undefined) charger.address = body.location.address;
+            if (body.location.coordinates) {
+                if (body.location.coordinates.lat !== undefined) charger.lat = body.location.coordinates.lat;
+                if (body.location.coordinates.lng !== undefined) charger.lng = body.location.coordinates.lng;
+            }
+        }
+
+        // 3. Pricing & Policies
+        if (body.pricing) {
+            if (body.pricing.hourly !== undefined) charger.pricePerHour = body.pricing.hourly;
+            if (body.pricing.weekend !== undefined) charger.weekendPrice = body.pricing.weekend;
+            if (body.pricing.cancellation_policy !== undefined) charger.cancellationPolicy = body.pricing.cancellation_policy;
+        }
+
+        // 4. Specs & Hardware
+        if (body.specs) {
+            if (body.specs.connector_type !== undefined) charger.connectorType = body.specs.connector_type;
+            if (body.specs.power_output_kw !== undefined) charger.powerOutput = body.specs.power_output_kw;
+            if (body.specs.voltage !== undefined) charger.voltage = body.specs.voltage;
+            if (body.specs.amperage !== undefined) charger.amperage = body.specs.amperage;
+            if (body.specs.ports) {
+                if (body.specs.ports.l2 !== undefined) charger.NumofLevel2Chargers = body.specs.ports.l2;
+                if (body.specs.ports.dc !== undefined) charger.NumofDCFastChargers = body.specs.ports.dc;
+            }
+        }
+
+        // 5. Amenities & Facilities
+        if (body.amenities) {
+            if (body.amenities.list !== undefined) charger.amenities = body.amenities.list;
+            if (body.amenities.facilities !== undefined) charger.facilities = body.amenities.facilities;
+        }
+
+        // --- Fallback to Flat Control (for generic updates) ---
+        const flatFields = ['deleted', 'access'];
+        flatFields.forEach(field => {
+            if (body[field] !== undefined) charger[field] = body[field];
         });
 
         await charger.save();

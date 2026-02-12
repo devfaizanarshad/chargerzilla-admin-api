@@ -111,8 +111,8 @@ router.get('/public/:id', auth, stationController.getPublicStationById);
 /**
  * @swagger
  * /api/admin/stations/public/{id}:
- *   put:
- *     summary: Edit Public Station (Maximum Control)
+ *   patch:
+ *     summary: Edit Public Station (Flat Structure)
  *     tags: [Public Stations]
  *     parameters:
  *       - in: path
@@ -126,20 +126,33 @@ router.get('/public/:id', auth, stationController.getPublicStationById);
  *             type: object
  *             properties:
  *               station_name: { type: string }
- *               street_address: { type: string }
- *               status: { type: string }
  *               online: { type: boolean }
  *               pricing: { type: string }
+ *               access: { type: string }
+ *               network_type_id: { type: integer }
+ *               facility_type_id: { type: integer }
+ *               street_address: { type: string }
+ *               city: { type: string }
+ *               state: { type: string }
+ *               zip: { type: string }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *               level: { type: string, enum: [L1, L2, "FAST Charger"] }
  *               total_ports: { type: integer }
+ *               status: { type: string }
  *               chademo: { type: integer }
  *               ccs: { type: integer }
  *               tesla: { type: integer }
+ *               j1772: { type: integer }
+ *               nema1450: { type: integer }
+ *               nema515: { type: integer }
+ *               nema520: { type: integer }
  *     responses:
  *       200:
  *         description: Station updated successfully
  */
-router.put('/public/:id', auth, stationController.updatePublicStation);
 router.patch('/public/:id', auth, stationController.updatePublicStation);
+router.put('/public/:id', auth, stationController.updatePublicStation);
 
 // ==========================================
 // PRIVATE CHARGERS (User Added)
@@ -213,7 +226,7 @@ router.get('/private/:id', auth, stationController.getPrivateChargerById);
  * @swagger
  * /api/admin/stations/private/{id}:
  *   put:
- *     summary: Edit Private Charger Details
+ *     summary: Edit Private Charger (Nested Structure)
  *     tags: [Private Chargers]
  *     parameters:
  *       - in: path
@@ -226,18 +239,41 @@ router.get('/private/:id', auth, stationController.getPrivateChargerById);
  *           schema:
  *             type: object
  *             properties:
- *               title: { type: string }
- *               description: { type: string }
- *               address: { type: string }
- *               pricePerHour: { type: number }
- *               weekendPrice: { type: number }
- *               connectorType: { type: string, description: "CSV like J1772,CCS" }
- *               powerOutput: { type: number }
- *               voltage: { type: integer }
- *               amperage: { type: integer }
- *               published: { type: boolean }
- *               disabled: { type: boolean }
- *               access: { type: string }
+ *               identity:
+ *                 type: object
+ *                 properties:
+ *                   title: { type: string }
+ *                   description: { type: string }
+ *                   status:
+ *                     type: object
+ *                     properties:
+ *                       published: { type: boolean }
+ *                       disabled: { type: boolean }
+ *                       draft: { type: boolean }
+ *               location:
+ *                 type: object
+ *                 properties:
+ *                   address: { type: string }
+ *                   coordinates: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+ *               pricing:
+ *                 type: object
+ *                 properties:
+ *                   hourly: { type: number }
+ *                   weekend: { type: number }
+ *                   cancellation_policy: { type: string }
+ *               specs:
+ *                 type: object
+ *                 properties:
+ *                   connector_type: { type: string }
+ *                   power_output_kw: { type: number }
+ *                   voltage: { type: integer }
+ *                   amperage: { type: integer }
+ *                   ports: { type: object, properties: { l2: { type: integer }, dc: { type: integer } } }
+ *               amenities:
+ *                 type: object
+ *                 properties:
+ *                   list: { type: array, items: { type: string } }
+ *                   facilities: { type: array, items: { type: string } }
  *     responses:
  *       200:
  *         description: Charger updated
