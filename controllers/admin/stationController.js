@@ -203,6 +203,11 @@ exports.updatePublicStation = async (req, res) => {
             if (req.body[field] !== undefined) station[field] = req.body[field];
         });
 
+        // Alias for frontend compatibility: frontend sends image_url, DB uses station_image
+        if (req.body.image_url !== undefined) {
+            station.station_image = req.body.image_url;
+        }
+
         await station.save();
         res.status(200).json({ success: true, data: station, message: 'Station updated successfully' });
     } catch (error) {
@@ -546,6 +551,34 @@ exports.deleteChargerMedia = async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error' });
     }
 };
+
+exports.deletePublicStationMedia = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const station = await PublicStation.findByPk(id);
+
+        if (!station) {
+            return res.status(404).json({ success: false, error: 'Public station not found' });
+        }
+
+        // --- Cloud Storage Cleanup (Placeholder) ---
+        // station.station_image contains the URL
+        // console.log(`[TODO] Delete station image from Cloudflare: ${station.station_image}`);
+
+        // Remove the reference from the database
+        station.station_image = null;
+        await station.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Public station image has been removed from the registry.'
+        });
+    } catch (error) {
+        console.error('Error deleting public station media:', error);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
 // ==========================================
 // LOOKUP DATA (For Filters)
 // ==========================================
