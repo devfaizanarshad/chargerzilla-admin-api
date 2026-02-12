@@ -13,7 +13,16 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(helmet()); // Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+            "img-src": ["'self'", "data:", "https://cdnjs.cloudflare.com"],
+        },
+    },
+})); // Security headers
 app.use(cors()); // Enable CORS
 app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
@@ -56,7 +65,21 @@ const swaggerOptions = {
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Use CDN for Swagger UI assets to avoid MIME type issues on Vercel
+const swaggerUiOptions = {
+    customCssUrl: [
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.css'
+    ],
+    customJs: [
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.js'
+    ],
+    customSiteTitle: "Chargerzilla Admin API Docs"
+};
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerUiOptions));
 
 // Expose raw JSON for frontend devs
 app.get('/api-docs.json', (req, res) => {
