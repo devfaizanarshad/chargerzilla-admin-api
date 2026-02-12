@@ -435,10 +435,10 @@ exports.updatePrivateCharger = async (req, res) => {
         if (!charger) return res.status(404).json({ success: false, error: 'Charger not found' });
 
         const body = req.body;
+        console.log('--- UPDATE PRIVATE CHARGER START ---');
+        console.log('Body:', JSON.stringify(body, null, 2));
 
-        // --- Handle Nested Structure (as per spec) ---
-
-        // 1. Identity & Status
+        // 1. Identity & Description
         if (body.identity) {
             if (body.identity.title !== undefined) charger.title = body.identity.title;
             if (body.identity.description !== undefined) charger.description = body.identity.description;
@@ -447,6 +447,10 @@ exports.updatePrivateCharger = async (req, res) => {
                 if (body.identity.status.disabled !== undefined) charger.disabled = body.identity.status.disabled;
                 if (body.identity.status.draft !== undefined) charger.draft = body.identity.status.draft;
             }
+        } else {
+            // Fallback for flat identity fields
+            if (body.title !== undefined) charger.title = body.title;
+            if (body.description !== undefined) charger.description = body.description;
         }
 
         // 2. Location
@@ -456,16 +460,25 @@ exports.updatePrivateCharger = async (req, res) => {
                 if (body.location.coordinates.lat !== undefined) charger.lat = body.location.coordinates.lat;
                 if (body.location.coordinates.lng !== undefined) charger.lng = body.location.coordinates.lng;
             }
+        } else {
+            // Fallback for flat location fields
+            if (body.address !== undefined) charger.address = body.address;
+            if (body.lat !== undefined) charger.lat = body.lat;
+            if (body.lng !== undefined) charger.lng = body.lng;
         }
 
-        // 3. Pricing & Policies
+        // 3. Pricing
         if (body.pricing) {
             if (body.pricing.hourly !== undefined) charger.pricePerHour = body.pricing.hourly;
             if (body.pricing.weekend !== undefined) charger.weekendPrice = body.pricing.weekend;
             if (body.pricing.cancellation_policy !== undefined) charger.cancellationPolicy = body.pricing.cancellation_policy;
+        } else {
+            // Fallback for flat pricing fields
+            if (body.pricePerHour !== undefined) charger.pricePerHour = body.pricePerHour;
+            if (body.weekendPrice !== undefined) charger.weekendPrice = body.weekendPrice;
         }
 
-        // 4. Specs & Hardware
+        // 4. Specs
         if (body.specs) {
             if (body.specs.connector_type !== undefined) charger.connectorType = body.specs.connector_type;
             if (body.specs.power_output_kw !== undefined) charger.powerOutput = body.specs.power_output_kw;
@@ -475,25 +488,46 @@ exports.updatePrivateCharger = async (req, res) => {
                 if (body.specs.ports.l2 !== undefined) charger.NumofLevel2Chargers = body.specs.ports.l2;
                 if (body.specs.ports.dc !== undefined) charger.NumofDCFastChargers = body.specs.ports.dc;
             }
+        } else {
+            // Fallback for flat specs fields
+            if (body.connectorType !== undefined) charger.connectorType = body.connectorType;
+            if (body.powerOutput !== undefined) charger.powerOutput = body.powerOutput;
+            if (body.NumofLevel2Chargers !== undefined) charger.NumofLevel2Chargers = body.NumofLevel2Chargers;
+            if (body.NumofDCFastChargers !== undefined) charger.NumofDCFastChargers = body.NumofDCFastChargers;
         }
 
-        // 5. Amenities & Facilities
+        // 5. Amenities & Facilities (Special handling for PostgreSQL Arrays)
         if (body.amenities) {
-            if (body.amenities.list !== undefined) charger.amenities = body.amenities.list;
-            if (body.amenities.facilities !== undefined) charger.facilities = body.amenities.facilities;
+            // Frontend spec: { amenities: { list: [], facilities: [] } }
+            if (body.amenities.list !== undefined) {
+                charger.amenities = body.amenities.list;
+            } else if (Array.isArray(body.amenities)) {
+                // Support flat array update too
+                charger.amenities = body.amenities;
+            }
+
+            if (body.amenities.facilities !== undefined) {
+                charger.facilities = body.amenities.facilities;
+            }
         }
 
-        // --- Fallback to Flat Control (for generic updates) ---
-        const flatFields = ['deleted', 'access'];
-        flatFields.forEach(field => {
+        // Support flat facilities update
+        if (body.facilities !== undefined && Array.isArray(body.facilities)) {
+            charger.facilities = body.facilities;
+        }
+
+        // 6. Generic Fields
+        const genericFields = ['deleted', 'disabled', 'published', 'draft', 'access'];
+        genericFields.forEach(field => {
             if (body[field] !== undefined) charger[field] = body[field];
         });
 
         await charger.save();
-        res.status(200).json({ success: true, data: charger, message: 'Charger updated successfully' });
+        console.log('--- UPDATE PRIVATE CHARGER SUCCESS ---');
+        res.status(200).json({ success: true, data: charger, message: 'Charger identity updated in registry.' });
     } catch (error) {
         console.error('Error updating private charger:', error);
-        res.status(500).json({ success: false, error: 'Server error' });
+        res.status(500).json({ success: false, error: 'Database Synchronization Error', detail: error.message });
     }
 };
 

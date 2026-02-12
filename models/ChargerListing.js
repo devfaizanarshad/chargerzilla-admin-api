@@ -43,9 +43,9 @@ const ChargerListing = sequelize.define('ChargerListing', {
     cancellationPolicy: { type: DataTypes.TEXT },
     smokingAllowed: { type: DataTypes.BOOLEAN },
 
-    // Amenities (JSON)
-    amenities: { type: DataTypes.JSON },
-    facilities: { type: DataTypes.JSON },
+    // Amenities & Facilities (PostgreSQL ARRAY)
+    amenities: { type: DataTypes.ARRAY(DataTypes.STRING) },
+    facilities: { type: DataTypes.ARRAY(DataTypes.STRING) },
 
     // Status
     deleted: { type: DataTypes.BOOLEAN, defaultValue: false },
