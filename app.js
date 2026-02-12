@@ -18,8 +18,10 @@ app.use(helmet({
         directives: {
             ...helmet.contentSecurityPolicy.getDefaultDirectives(),
             "script-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-            "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+            "font-src": ["'self'", "https://fonts.gstatic.com"],
             "img-src": ["'self'", "data:", "https://cdnjs.cloudflare.com"],
+            "connect-src": ["'self'", "https://chargerzilla-admin-api.vercel.app"],
         },
     },
 })); // Security headers
@@ -41,6 +43,10 @@ const swaggerOptions = {
             }
         },
         servers: [
+            {
+                url: 'https://chargerzilla-admin-api.vercel.app',
+                description: 'Production Server'
+            },
             {
                 url: `http://localhost:${process.env.PORT || 3000}`,
                 description: 'Development Server'
@@ -68,15 +74,8 @@ const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
 // Use CDN for Swagger UI assets to avoid MIME type issues on Vercel
 const swaggerUiOptions = {
-    customCssUrl: [
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.css'
-    ],
-    customJs: [
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.js'
-    ],
-    customSiteTitle: "Chargerzilla Admin API Docs"
+    customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
+    customJs: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.js'
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerUiOptions));
