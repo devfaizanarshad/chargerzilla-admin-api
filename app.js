@@ -1,0 +1,101 @@
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
+
+// Load environment variables
+dotenv.config();
+
+// Initialize app
+const app = express();
+
+// Middleware
+app.use(helmet()); // Security headers
+app.use(cors()); // Enable CORS
+app.use(morgan('dev')); // Logging
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true }));
+
+// Swagger Configuration
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Chargerzilla Admin API',
+            version: '1.0.0',
+            description: 'Administrative backend for Chargerzilla platform',
+            contact: {
+                name: 'Chargerzilla Tech Team'
+            }
+        },
+        servers: [
+            {
+                url: `http://localhost:${process.env.PORT || 3000}`,
+                description: 'Development Server'
+            }
+        ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                }
+            }
+        },
+        security: [
+            {
+                bearerAuth: []
+            }
+        ]
+    },
+    apis: ['./routes/admin/*.js'] // Path to route files for auto-docs
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Expose raw JSON for frontend devs
+app.get('/api-docs.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerDocs);
+});
+
+// Mount Routes
+app.get('/api/admin/ping', (req, res) => res.json({ success: true, message: 'pong' }));
+
+app.use('/api/admin/users', require('./routes/admin/users'));
+app.use('/api/admin/bookings', require('./routes/admin/bookings'));
+app.use('/api/admin/stations', require('./routes/admin/stations'));
+app.use('/api/admin/metadata', (req, res, next) => {
+    console.log(`[DEBUG] Metadata Request: ${req.method} ${req.url}`);
+    next();
+}, require('./routes/admin/metadata'));
+
+// Base Route
+app.get('/', (req, res) => {
+    res.json({ message: 'Chargerzilla Admin API Running', docs: '/api-docs' });
+});
+
+// 404 Handler
+app.use((req, res, next) => {
+    res.status(404).json({ success: false, error: 'Endpoint not found' });
+});
+
+// Error Handler
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ success: false, error: 'Server Error', details: err.message });
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Swagger Docs available at http://localhost:${PORT}/api-docs`);
+});
+
+module.exports = app;

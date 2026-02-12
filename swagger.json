@@ -1,0 +1,974 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Chargerzilla Admin API",
+    "version": "1.0.0",
+    "description": "Administrative backend for Chargerzilla platform",
+    "contact": {
+      "name": "Chargerzilla Tech Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/admin/bookings/stats": {
+      "get": {
+        "summary": "Get booking statistics and financial dashboard",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date_from",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Start date filter (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "schema": {
+              "type": "string"
+            },
+            "description": "End date filter (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Financial dashboard with status breakdown, revenue metrics, monthly trends, and top chargers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "overview": {
+                          "type": "object"
+                        },
+                        "status_breakdown": {
+                          "type": "object"
+                        },
+                        "payment_breakdown": {
+                          "type": "object"
+                        },
+                        "financials": {
+                          "type": "object"
+                        },
+                        "monthly_trend": {
+                          "type": "array"
+                        },
+                        "top_chargers": {
+                          "type": "array"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/bookings": {
+      "get": {
+        "summary": "Get all bookings with advanced filtering and search",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number (default 1)"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Items per page (default 15)"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Reserved",
+                "CancelledByHost",
+                "CancelledByGuest",
+                "Waiting",
+                "Completed"
+              ]
+            },
+            "description": "Filter by booking status"
+          },
+          {
+            "in": "query",
+            "name": "paymentStatus",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "captured",
+                "funds-released",
+                "cancelled"
+              ]
+            },
+            "description": "Filter by payment status"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by booking ID (nid) or message content"
+          },
+          {
+            "in": "query",
+            "name": "guest_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by guest user ID"
+          },
+          {
+            "in": "query",
+            "name": "host_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by host user ID (via charger owner)"
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "schema": {
+              "type": "string"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "arriveDate",
+                "subtotal",
+                "status",
+                "paymentStatus"
+              ]
+            },
+            "description": "Sort field (default createdAt)"
+          },
+          {
+            "in": "query",
+            "name": "sort_order",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort direction (default DESC)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of bookings with guest, charger and host info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "pagination": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/bookings/{id}": {
+      "get": {
+        "summary": "Get full booking detail (Guest - Booking - Charger - Host chain)",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Booking ID (string UUID)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete booking detail with financials, extras, communication, and linked entities"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update booking status or payment status (Admin moderation)",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "Reserved",
+                      "CancelledByHost",
+                      "CancelledByGuest",
+                      "Waiting",
+                      "Completed"
+                    ]
+                  },
+                  "paymentStatus": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "captured",
+                      "funds-released",
+                      "cancelled",
+                      "refunded"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking updated with change log"
+          },
+          "400": {
+            "description": "No valid fields provided"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        }
+      }
+    },
+    "/api/admin/metadata": {
+      "get": {
+        "summary": "Get all valid lookup values for administrator filters",
+        "tags": [
+          "Metadata"
+        ],
+        "responses": {
+          "200": {
+            "description": "Full set of metadata including cities, networks, hosts, and status constants"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/public": {
+      "get": {
+        "summary": "Get all public stations with advanced filtering",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by name or address"
+          },
+          {
+            "in": "query",
+            "name": "connector",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "chk_chademo",
+                "chk_ccs",
+                "chk_tesla",
+                "chk_j1772"
+              ]
+            },
+            "description": "Filter by connector type availability"
+          },
+          {
+            "in": "query",
+            "name": "level",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by charging level"
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Search by station ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of public stations"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/networks": {
+      "get": {
+        "summary": "Get all network types",
+        "tags": [
+          "Public Stations"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of networks for dropdowns"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/facilities": {
+      "get": {
+        "summary": "Get all facility types",
+        "tags": [
+          "Public Stations"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of facilities for dropdowns"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/public/{id}": {
+      "get": {
+        "summary": "Get single public station details",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station details (identity, location, connectors, media, activity_log)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "identity": {
+                      "type": "object"
+                    },
+                    "location": {
+                      "type": "object"
+                    },
+                    "connectors": {
+                      "type": "object"
+                    },
+                    "media": {
+                      "type": "object"
+                    },
+                    "activity_log": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit Public Station (Maximum Control)",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "station_name": {
+                    "type": "string"
+                  },
+                  "street_address": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "online": {
+                    "type": "boolean"
+                  },
+                  "pricing": {
+                    "type": "string"
+                  },
+                  "total_ports": {
+                    "type": "integer"
+                  },
+                  "chademo": {
+                    "type": "integer"
+                  },
+                  "ccs": {
+                    "type": "integer"
+                  },
+                  "tesla": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Station updated successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/private": {
+      "get": {
+        "summary": "Get all private chargers with search",
+        "tags": [
+          "Private Chargers"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by title, description, or address"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "published",
+                "draft",
+                "disabled"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "host_id",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of private chargers"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/private/{id}": {
+      "get": {
+        "summary": "Get single private charger details",
+        "tags": [
+          "Private Chargers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Charger details (identity, location, availability, gallery, activity_log)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "identity": {
+                      "type": "object"
+                    },
+                    "location": {
+                      "type": "object"
+                    },
+                    "availability": {
+                      "type": "object",
+                      "description": "Timings & Days"
+                    },
+                    "gallery": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "amenities": {
+                      "type": "object",
+                      "description": "Upsells & Facilities"
+                    },
+                    "activity_log": {
+                      "type": "array",
+                      "description": "Bookings & Chat History"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit Private Charger Details",
+        "tags": [
+          "Private Chargers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "pricePerHour": {
+                    "type": "number"
+                  },
+                  "weekendPrice": {
+                    "type": "number"
+                  },
+                  "connectorType": {
+                    "type": "string",
+                    "description": "CSV like J1772,CCS"
+                  },
+                  "powerOutput": {
+                    "type": "number"
+                  },
+                  "voltage": {
+                    "type": "integer"
+                  },
+                  "amperage": {
+                    "type": "integer"
+                  },
+                  "published": {
+                    "type": "boolean"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "access": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Charger updated"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Moderate status (Quick Action)",
+        "tags": [
+          "Private Chargers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "published": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status toggled"
+          }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "Get all users",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Items per page"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by email"
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by user role (host/guest)"
+          },
+          {
+            "in": "query",
+            "name": "stripe_verified",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by Stripe verification status"
+          },
+          {
+            "in": "query",
+            "name": "email_verified",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by Email verification status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users with stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "stats": {
+                            "type": "object",
+                            "properties": {
+                              "listings": {
+                                "type": "integer"
+                              },
+                              "bookings": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}": {
+      "get": {
+        "summary": "Get user details",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details including listings and bookings"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update user status",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "phoneNumber": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "guest",
+                      "host",
+                      "admin"
+                    ]
+                  },
+                  "active_status": {
+                    "type": "boolean"
+                  },
+                  "delete_status": {
+                    "type": "boolean"
+                  },
+                  "isEmailVerified": {
+                    "type": "boolean"
+                  },
+                  "isStripeVerified": {
+                    "type": "boolean"
+                  },
+                  "account_type": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Bookings",
+      "description": "Booking management and financial analytics"
+    },
+    {
+      "name": "Metadata",
+      "description": "Lookup data for filters and select menus"
+    },
+    {
+      "name": "Public Stations",
+      "description": "System/Network charging stations"
+    },
+    {
+      "name": "Private Chargers",
+      "description": "User-hosted chargers"
+    },
+    {
+      "name": "Users",
+      "description": "User management endpoints"
+    }
+  ]
+}

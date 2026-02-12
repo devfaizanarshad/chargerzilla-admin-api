@@ -1,0 +1,661 @@
+Connected to database successfully!
+
+================================================================================
+1. ALL TABLES IN DATABASE
+================================================================================
+Found 46 tables:
+
+  - Booking (BASE TABLE)
+  - BookingExtraService (BASE TABLE)
+  - ChargerDay (BASE TABLE)
+  - ChargerListing (BASE TABLE)
+  - ChargerMedia (BASE TABLE)
+  - ChargerTiming (BASE TABLE)
+  - Conversation (BASE TABLE)
+  - ExtraService (BASE TABLE)
+  - Message (BASE TABLE)
+  - RecurringBooking (BASE TABLE)
+  - SequelizeMeta (BASE TABLE)
+  - SkippedBooking (BASE TABLE)
+  - _ChargingStationToPaymentMethod (BASE TABLE)
+  - _prisma_migrations (BASE TABLE)
+  - blog (BASE TABLE)
+  - charger_types (BASE TABLE)
+  - charging_stations (BASE TABLE)
+  - checkins (BASE TABLE)
+  - cities (BASE TABLE)
+  - countries (BASE TABLE)
+  - facility_types (BASE TABLE)
+  - favourite_station (BASE TABLE)
+  - geography_columns (VIEW)
+  - geometry_columns (VIEW)
+  - icon_types (BASE TABLE)
+  - map_icon_types (BASE TABLE)
+  - master_cms (BASE TABLE)
+  - master_cms_contactus (BASE TABLE)
+  - master_user (BASE TABLE)
+  - network_types (BASE TABLE)
+  - notifications (BASE TABLE)
+  - payment_methods (BASE TABLE)
+  - plug_types (BASE TABLE)
+  - raster_columns (VIEW)
+  - raster_overviews (VIEW)
+  - settings (BASE TABLE)
+  - spatial_ref_sys (BASE TABLE)
+  - states (BASE TABLE)
+  - station_review (BASE TABLE)
+  - trip_to_station (BASE TABLE)
+  - trip_to_station_stop (BASE TABLE)
+  - us_gaz (BASE TABLE)
+  - us_lex (BASE TABLE)
+  - us_rules (BASE TABLE)
+  - vehicles (BASE TABLE)
+  - zipcodes (BASE TABLE)
+
+================================================================================
+2. DETAILED TABLE SCHEMAS
+================================================================================
+
+--- Booking ---
+  id: text NOT NULL 
+  charger_id: text NOT NULL 
+  arriveDate: text NOT NULL 
+  startTime: text NOT NULL 
+  endTime: text NOT NULL 
+  totalHours: real NOT NULL 
+  subtotal: double precision NOT NULL 
+  message: text  
+  paymentStatus: text NOT NULL DEFAULT 'Pending'::text
+  paymentIntentId: text  
+  status: text NOT NULL DEFAULT 'Waiting'::text
+  recurring_booking_id: text  
+  createdAt: timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updatedAt: timestamp without time zone NOT NULL 
+  createdBy: integer  
+  extras: jsonb  
+  nid: character varying  
+  charges: jsonb  
+
+--- BookingExtraService ---
+  id: text NOT NULL 
+  booking_id: text NOT NULL 
+  extra_service_id: text NOT NULL 
+
+--- ChargerDay ---
+  id: text NOT NULL 
+  day: text NOT NULL 
+  timing_id: text NOT NULL 
+
+--- ChargerListing ---
+  id: text NOT NULL 
+  createdBy: integer NOT NULL 
+  title: text NOT NULL 
+  description: text NOT NULL 
+  connectorType: text NOT NULL 
+  powerOutput: double precision NOT NULL 
+  voltage: double precision NOT NULL 
+  amperage: double precision NOT NULL 
+  NumofLevel2Chargers: integer NOT NULL 
+  NumofDCFastChargers: integer  
+  pricePerHour: double precision NOT NULL 
+  weekendPrice: double precision  
+  smokingAllowed: boolean  
+  cancellationPolicy: text  
+  amenities: ARRAY  
+  facilities: ARRAY  
+  createdAt: timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updatedAt: timestamp without time zone NOT NULL 
+  address: text NOT NULL 
+  deleted: boolean NOT NULL 
+  disabled: boolean NOT NULL 
+  draft: boolean NOT NULL 
+  published: boolean NOT NULL 
+  lat: double precision NOT NULL 
+  lng: double precision NOT NULL 
+  networkType: character varying(255)  DEFAULT ''::character varying
+  facilityType: character varying(255)  DEFAULT ''::character varying
+  iid: integer  DEFAULT nextval('charging_stations_id_seq'::regclass)
+  nid: character varying  
+  is24Hours: boolean  DEFAULT false
+  zipcode: character varying  
+
+--- ChargerMedia ---
+  id: text NOT NULL 
+  url: text NOT NULL 
+  charger_id: text NOT NULL 
+
+--- ChargerTiming ---
+  id: text NOT NULL 
+  from: text NOT NULL 
+  to: text NOT NULL 
+  charger_id: text NOT NULL 
+  weekday: boolean  DEFAULT true
+
+--- Conversation ---
+  id: text NOT NULL 
+  booking_id: text NOT NULL 
+  createdAt: timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updatedAt: timestamp without time zone NOT NULL 
+
+--- ExtraService ---
+  id: text NOT NULL 
+  name: text NOT NULL 
+  price: double precision NOT NULL 
+  charger_id: text NOT NULL 
+  flatFee: boolean  DEFAULT false
+
+--- Message ---
+  id: text NOT NULL 
+  conversation_id: text NOT NULL 
+  sender_id: text NOT NULL 
+  content: text NOT NULL 
+  createdAt: timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+  read: boolean NOT NULL DEFAULT false
+
+--- RecurringBooking ---
+  id: text NOT NULL 
+  repeatType: text NOT NULL 
+  customDays: ARRAY  
+  endConditionType: text NOT NULL 
+  occurrences: integer  
+  endDate: timestamp without time zone  
+  createdAt: timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updatedAt: timestamp without time zone NOT NULL 
+
+--- SequelizeMeta ---
+  name: character varying(255) NOT NULL 
+
+--- SkippedBooking ---
+  id: text NOT NULL 
+  booking_id: text NOT NULL 
+  skippedDate: timestamp without time zone NOT NULL 
+
+--- _ChargingStationToPaymentMethod ---
+  A: integer NOT NULL 
+  B: integer NOT NULL 
+
+--- _prisma_migrations ---
+  id: character varying(36) NOT NULL 
+  checksum: character varying(64) NOT NULL 
+  finished_at: timestamp with time zone  
+  migration_name: character varying(255) NOT NULL 
+  logs: text  
+  rolled_back_at: timestamp with time zone  
+  started_at: timestamp with time zone NOT NULL DEFAULT now()
+  applied_steps_count: integer NOT NULL DEFAULT 0
+
+--- blog ---
+  id: integer NOT NULL DEFAULT nextval('blog_id_seq'::regclass)
+  text: text NOT NULL 
+  image: text  
+  link: text  
+  created_at: timestamp with time zone  DEFAULT CURRENT_TIMESTAMP
+
+--- charger_types ---
+  id: integer NOT NULL DEFAULT nextval('charger_types_id_seq'::regclass)
+  name: character varying(255)  
+  iconname: character varying(50)  
+  station_iconname: text  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- charging_stations ---
+  id: integer NOT NULL DEFAULT nextval('charging_stations_id_seq'::regclass)
+  station_name: character varying(255)  
+  street_address: character varying(255)  
+  city_id: integer  
+  station_image: character varying(255)  
+  zipcode_id: integer  
+  phone: character varying(255)  
+  Availability: character varying(255)  
+  total_no_of_ports: integer  
+  level: text  
+  chademo: integer  DEFAULT 0
+  j1772: integer  DEFAULT 0
+  ccs: integer  DEFAULT 0
+  tesla: integer  DEFAULT 0
+  ccs_power: integer  
+  chademo_power: integer  
+  j1772_power: integer  
+  tesla_power: integer  
+  network_type_id: integer  
+  latitude: double precision  
+  longitude: double precision  
+  facility_type_id: integer  
+  pricing: character varying(255)  
+  image_id: integer  
+  map_image_id: integer  
+  online: boolean  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+  countryId: integer  
+  equipment: integer  
+  access: character varying(255)  
+  nema1450: integer  
+  nema515: integer  
+  nema520: integer  
+  charger_id: integer  
+  open_date: date  
+  effective_date: date  
+
+--- checkins ---
+  id: integer NOT NULL DEFAULT nextval('checkins_id_seq'::regclass)
+  user_id: integer NOT NULL 
+  station_id: integer NOT NULL 
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  type: text  
+  description: text  
+
+--- cities ---
+  id: integer NOT NULL DEFAULT nextval('cities_id_seq'::regclass)
+  state_id: integer  
+  city_name: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- countries ---
+  id: integer NOT NULL DEFAULT nextval('countries_id_seq'::regclass)
+  country_name: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- facility_types ---
+  id: integer NOT NULL DEFAULT nextval('facility_types_id_seq'::regclass)
+  facility_name: character varying(255)  
+  iconname: character varying(50)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- favourite_station ---
+  id: integer NOT NULL DEFAULT nextval('favourite_station_id_seq'::regclass)
+  user_id: integer NOT NULL 
+  station_id: integer  
+  active_status: boolean  DEFAULT false
+  delete_status: boolean  DEFAULT false
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+  charger_id: integer  
+
+--- icon_types ---
+  id: integer NOT NULL DEFAULT nextval('icon_types_id_seq'::regclass)
+  image: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- map_icon_types ---
+  id: integer NOT NULL DEFAULT nextval('map_icon_types_id_seq'::regclass)
+  image: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- master_cms ---
+  id: integer NOT NULL DEFAULT nextval('master_cms_id_seq'::regclass)
+  page_name: character varying(255)  
+  page_description: character varying  
+  page_short_description: character varying  
+  meta_title: character varying(255)  
+  meta_keyword: character varying(255)  
+  meta_description: character varying(255)  
+  seo_url: character varying(255)  
+  banner_pic: character varying(255)  
+  active_status: boolean  DEFAULT false
+  delete_status: boolean  DEFAULT false
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- master_cms_contactus ---
+  id: integer NOT NULL DEFAULT nextval('master_cms_contactus_id_seq'::regclass)
+  user_id: integer  
+  name: text NOT NULL 
+  email: text NOT NULL 
+  message: text  
+  active_status: boolean  DEFAULT false
+  delete_status: boolean  DEFAULT false
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- master_user ---
+  id: integer NOT NULL DEFAULT nextval('master_user_id_seq'::regclass)
+  name: character varying(255) NOT NULL 
+  email: character varying(255) NOT NULL 
+  newemail: character varying(255)  
+  otp: character varying(255)  
+  isNewEmailVerified: boolean  DEFAULT false
+  isEmailVerified: boolean  DEFAULT false
+  active_status: boolean  DEFAULT false
+  delete_status: boolean  DEFAULT false
+  created_at: timestamp with time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp with time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp with time zone  
+  zipcode_id: integer  
+  profile_picture: text  
+  username: text  
+  password: text  
+  device_type: text  
+  firebase_uid: text  
+  push_token: text  
+  phone: character varying(255)  
+  profileImage: character varying(255)  
+  terms_and_conditions_accepted: boolean  DEFAULT false
+  vehicle_id: integer  
+  role: character varying(255)  DEFAULT 'guest'::character varying
+  address: character varying(255)  
+  stripeCustomerId: character varying(255)  
+  isStripeVerified: boolean  DEFAULT false
+  stripeAccountId: character varying(255)  
+  externalAccountToken: character varying(255)  
+  zipcode: character varying  
+  state: character varying  
+  city: character varying  
+  state_id: integer  
+  city_id: integer  
+  account_type: character varying NOT NULL DEFAULT 'guest'::character varying
+  description: text  
+  country: text  
+
+--- network_types ---
+  id: integer NOT NULL DEFAULT nextval('network_types_id_seq'::regclass)
+  network_name: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+  iconname: character varying(255)  
+  website: character varying(255)  
+  phone: character varying(255)  
+
+--- notifications ---
+  title: character varying(255) NOT NULL 
+  body: character varying(255) NOT NULL 
+  read: boolean NOT NULL DEFAULT false
+  userId: integer NOT NULL 
+  id: integer NOT NULL DEFAULT nextval('notification_id_seq'::regclass)
+  bookingId: character varying  
+  createdAt: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updatedAt: timestamp without time zone  
+
+--- payment_methods ---
+  id: integer NOT NULL DEFAULT nextval('payment_methods_id_seq'::regclass)
+  name: character varying(255)  
+  iconname: character varying(50)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- plug_types ---
+  id: integer NOT NULL DEFAULT nextval('plug_types_id_seq'::regclass)
+  name: character varying(255)  
+  iconname: character varying(255)  
+
+--- settings ---
+  id: integer NOT NULL DEFAULT nextval('settings_id_seq'::regclass)
+  key: character varying(255)  
+  value: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- spatial_ref_sys ---
+  srid: integer NOT NULL 
+  auth_name: character varying(256)  
+  auth_srid: integer  
+  srtext: character varying(2048)  
+  proj4text: character varying(2048)  
+
+--- states ---
+  id: integer NOT NULL DEFAULT nextval('states_id_seq'::regclass)
+  country_id: integer  
+  state_name: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- station_review ---
+  id: integer NOT NULL DEFAULT nextval('station_review_id_seq'::regclass)
+  review: character varying(255)  
+  station_id: integer  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+  reviewBy: integer NOT NULL 
+  stars: integer NOT NULL DEFAULT 1
+
+--- trip_to_station ---
+  id: integer NOT NULL DEFAULT nextval('trip_to_station_id_seq'::regclass)
+  user_id: integer  
+  origin_location: text  
+  destination_location: text  
+  distance: text  
+  time_taken: text  
+  path: ARRAY  
+  active_status: boolean  DEFAULT true
+  delete_status: boolean  DEFAULT false
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+  title: character varying  
+
+--- trip_to_station_stop ---
+  id: integer NOT NULL DEFAULT nextval('trip_to_station_stop_id_seq'::regclass)
+  station_id: integer  
+  trip_id: integer  
+  active_status: boolean  DEFAULT true
+  delete_status: boolean  DEFAULT false
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+--- us_gaz ---
+  id: integer NOT NULL DEFAULT nextval('us_gaz_id_seq'::regclass)
+  seq: integer  
+  word: text  
+  stdword: text  
+  token: integer  
+  is_custom: boolean NOT NULL DEFAULT true
+
+--- us_lex ---
+  id: integer NOT NULL DEFAULT nextval('us_lex_id_seq'::regclass)
+  seq: integer  
+  word: text  
+  stdword: text  
+  token: integer  
+  is_custom: boolean NOT NULL DEFAULT true
+
+--- us_rules ---
+  id: integer NOT NULL DEFAULT nextval('us_rules_id_seq'::regclass)
+  rule: text  
+  is_custom: boolean NOT NULL DEFAULT true
+
+--- vehicles ---
+  id: integer NOT NULL DEFAULT nextval('vehicles_id_seq'::regclass)
+  make: character varying(255)  
+  model: character varying(255)  
+  electric_range: character varying(255)  
+  vehicle_type: character varying(255)  
+  propulsion: character varying(255)  
+  drivetrain: character varying(255)  
+  fuel_efficiency: character varying(255)  
+  charging_rate: character varying(255)  
+  charging_speed: character varying(255)  
+  battery_capacity: character varying(255)  
+  seats: character varying(255)  
+  base_msrp: character varying(255)  
+
+--- zipcodes ---
+  id: integer NOT NULL DEFAULT nextval('zipcodes_id_seq'::regclass)
+  zipcode: character varying(255)  
+  created_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  updated_at: timestamp without time zone  DEFAULT CURRENT_TIMESTAMP
+  deleted_at: timestamp without time zone  
+
+================================================================================
+3. FOREIGN KEY RELATIONSHIPS
+================================================================================
+
+Found 28 foreign key relationships:
+
+  Booking.recurring_booking_id -> RecurringBooking.id
+  Booking.charger_id -> ChargerListing.id
+  BookingExtraService.booking_id -> Booking.id
+  BookingExtraService.extra_service_id -> ExtraService.id
+  ChargerDay.timing_id -> ChargerTiming.id
+  ChargerMedia.charger_id -> ChargerListing.id
+  ChargerTiming.charger_id -> ChargerListing.id
+  Conversation.booking_id -> Booking.id
+  ExtraService.charger_id -> ChargerListing.id
+  Message.conversation_id -> Conversation.id
+  SkippedBooking.booking_id -> Booking.id
+  _ChargingStationToPaymentMethod.B -> payment_methods.id
+  _ChargingStationToPaymentMethod.A -> charging_stations.id
+  charging_stations.image_id -> icon_types.id
+  charging_stations.city_id -> cities.id
+  charging_stations.map_image_id -> map_icon_types.id
+  charging_stations.network_type_id -> network_types.id
+  charging_stations.zipcode_id -> zipcodes.id
+  charging_stations.facility_type_id -> facility_types.id
+  charging_stations.countryId -> countries.id
+  checkins.station_id -> charging_stations.id
+  cities.state_id -> states.id
+  favourite_station.station_id -> charging_stations.id
+  favourite_station.charger_id -> ChargerListing.iid
+  states.country_id -> countries.id
+  station_review.station_id -> ChargerListing.iid
+  trip_to_station_stop.trip_id -> trip_to_station.id
+  trip_to_station_stop.station_id -> charging_stations.id
+
+================================================================================
+4. PRIMARY KEYS
+================================================================================
+  Booking: id
+  BookingExtraService: id
+  ChargerDay: id
+  ChargerListing: id
+  ChargerMedia: id
+  ChargerTiming: id
+  Conversation: id
+  ExtraService: id
+  Message: id
+  RecurringBooking: id
+  SequelizeMeta: name
+  SkippedBooking: id
+  _prisma_migrations: id
+  blog: id
+  charger_types: id
+  charging_stations: id
+  checkins: id
+  cities: id
+  countries: id
+  facility_types: id
+  favourite_station: id
+  icon_types: id
+  map_icon_types: id
+  master_cms: id
+  master_cms_contactus: id
+  master_user: id
+  network_types: id
+  notifications: id
+  payment_methods: id
+  plug_types: id
+  settings: id
+  spatial_ref_sys: srid
+  states: id
+  station_review: id
+  trip_to_station: id
+  trip_to_station_stop: id
+  us_gaz: id
+  us_lex: id
+  us_rules: id
+  vehicles: id
+  zipcodes: id
+
+================================================================================
+5. ROW COUNTS
+================================================================================
+  Booking: 45 rows
+  BookingExtraService: 0 rows
+  ChargerDay: 0 rows
+  ChargerListing: 26 rows
+  ChargerMedia: 32 rows
+  ChargerTiming: 50 rows
+  Conversation: 0 rows
+  ExtraService: 16 rows
+  Message: 0 rows
+  RecurringBooking: 0 rows
+  SequelizeMeta: 0 rows
+  SkippedBooking: 0 rows
+  _ChargingStationToPaymentMethod: 0 rows
+  _prisma_migrations: 3 rows
+  blog: 4 rows
+  charger_types: 6 rows
+  charging_stations: 97141 rows
+  checkins: 0 rows
+  cities: 11607 rows
+  countries: 2 rows
+  facility_types: 57 rows
+  favourite_station: 1 rows
+  icon_types: 13 rows
+  map_icon_types: 13 rows
+  master_cms: 4 rows
+  master_cms_contactus: 0 rows
+  master_user: 3 rows
+  network_types: 92 rows
+  notifications: 0 rows
+  payment_methods: 4 rows
+  plug_types: 8 rows
+  settings: 7 rows
+  spatial_ref_sys: 8500 rows
+  states: 64 rows
+  station_review: 5 rows
+  trip_to_station: 36 rows
+  trip_to_station_stop: 6 rows
+  us_gaz: 1074 rows
+  us_lex: 2940 rows
+  us_rules: 4369 rows
+  vehicles: 137 rows
+  zipcodes: 22049 rows
+
+================================================================================
+6. SAMPLE DATA FROM KEY TABLES
+================================================================================
+
+--- Sample charging_stations (5 rows) ---
+Columns: id, station_name, street_address, city_id, station_image, zipcode_id, phone, Availability, total_no_of_ports, level, chademo, j1772, ccs, tesla, ccs_power, chademo_power, j1772_power, tesla_power, network_type_id, latitude, longitude, facility_type_id, pricing, image_id, map_image_id, online, created_at, updated_at, deleted_at, countryId, equipment, access, nema1450, nema515, nema520, charger_id, open_date, effective_date
+
+--- Sample master_user (all rows) ---
+{"id":1,"name":"Synx Test","email":"synxtest26@gmail.com","newemail":null,"otp":"136729","isNewEmailVerified":false,"isEmailVerified":false,"active_status":false,"delete_status":false,"created_at":"2025-12-29T15:18:22.624Z","updated_at":"2025-12-29T15:18:22.624Z","deleted_at":null,"zipcode_id":null,"profile_picture":null,"username":null,"password":"$2a$10$.H5eYoUd2rJAQuC8DZvagumTbFRhKkChDmdxuwq/JrsJNjqMyeVii","device_type":"web","firebase_uid":null,"push_token":null,"phone":null,"profileImage":null,"terms_and_conditions_accepted":true,"vehicle_id":null,"role":"guest","address":null,"stripeCustomerId":null,"isStripeVerified":false,"stripeAccountId":null,"externalAccountToken":null,"zipcode":null,"state":null,"city":null,"state_id":null,"city_id":null,"account_type":"guest","description":null,"country":null}
+{"id":2,"name":"Tom Kumar","email":"tomkumardc@gmail.com","newemail":null,"otp":null,"isNewEmailVerified":true,"isEmailVerified":true,"active_status":true,"delete_status":false,"created_at":"2025-12-29T15:21:48.839Z","updated_at":"2025-12-29T15:21:48.839Z","deleted_at":null,"zipcode_id":null,"profile_picture":null,"username":null,"password":"$2a$10$c1GBW019Tvyu74oy7.sqruOYqDea6BaZDPjh5wPeSHgV9/nixWkN6","device_type":"android","firebase_uid":null,"push_token":"fWkhT8GFQsCMwCm5wA54rc:APA91bF2IOObMLKnHAl7rHMcHmmWUmLZVplZ5WbUM9Qi_ElUc_sXI28QDL6uipjFjp29I6cd4aOxum_jETp4NWHHqc2OIU9pr8XdNWbxq3md98tTl7aFRAU","phone":"20740","profileImage":null,"terms_and_conditions_accepted":true,"vehicle_id":null,"role":"host","address":"1600 Pennsylvania Avenue Northwest, Washington, DC, 20500, United States","stripeCustomerId":null,"isStripeVerified":false,"stripeAccountId":null,"externalAccountToken":null,"zipcode":"20500","state":"DC","city":"Washington","state_id":null,"city_id":null,"account_type":"host","description":"Im a ev host helping community ","country":"United States"}
+{"id":3,"name":"Azaz Mushtaq","email":"aziijnab@gmail.com","newemail":null,"otp":null,"isNewEmailVerified":false,"isEmailVerified":false,"active_status":true,"delete_status":false,"created_at":"2026-01-09T22:16:51.292Z","updated_at":"2026-01-09T22:16:51.292Z","deleted_at":null,"zipcode_id":null,"profile_picture":"https://lh3.googleusercontent.com/a/ACg8ocLERh1J801wC08MLmV6_oTFduriLSIU-ukH0Yuqf0ouklQMEyi1=s96-c","username":"Azaz Mushtaq","password":null,"device_type":"ios","firebase_uid":"3OXKFAfm7LVVdzqtinU6nHeOWI72","push_token":"dj2409cN_kgPtVrGXa38ie:APA91bFX0jMw2PDitGwfrBiCMm2Xgt2r05GRXpkc6VGI-Wfw1Gx4XI957NWNZGsiEta46sOu8lMlTlsbGlkgzXRWZLhewhqo4t_brkSczX6c3kGgTcrSy-c","phone":null,"profileImage":null,"terms_and_conditions_accepted":false,"vehicle_id":null,"role":"guest","address":null,"stripeCustomerId":null,"isStripeVerified":false,"stripeAccountId":null,"externalAccountToken":null,"zipcode":null,"state":null,"city":null,"state_id":null,"city_id":null,"account_type":"guest","description":null,"country":null}
+
+--- Sample Booking (5 rows) ---
+Columns: id, charger_id, arriveDate, startTime, endTime, totalHours, subtotal, message, paymentStatus, paymentIntentId, status, recurring_booking_id, createdAt, updatedAt, createdBy, extras, nid, charges
+{"id":"MtfiovBhA2Z2LRPNyka4bK","charger_id":"WG0ejIuus4SP1kDIMI6YzR","arriveDate":"2025-09-05","startTime":"2025-09-05T15:30:00","endTime":"2025-09-05T16:00:00","totalHours":0.5,"subtotal":3.13,"message":"Hi,  I am booking from iPhone. Kindly accept ","paymentStatus":"pending","paymentIntentId":"pi_3S3nCnLwSJaEWymt0cKiU7pD","status":"CancelledByHost","recurring_booking_id":null,"createdAt":"2025-09-04T19:10:18.418Z","updatedAt":"2025-09-04T19:10:18.418Z","createdBy":1070,"extras":[{"id":"aEyFgDm33M4eec85DVGE-W","name":"Coke","price":1,"enabled":false,"flatFee":true,"charger_id":"WG0ejIuus4SP1kDIMI6YzR","totalHours":"0.50"}],"nid":"BK_050925_141","charges":{"finalCost":"2.75","bookingFee":"0.25","flatAmount":"0.30","finalAmount":"3.13","totalStripeFee":"0.38","percentageAmount":"0.08"}}
+{"id":"QmF4AuOfTzwTOLs9y0myX5","charger_id":"Kg-W3BVF3f1QOyO_AJSL-F","arriveDate":"2025-07-16","startTime":"2025-07-16T10:30:00","endTime":"2025-07-16T11:00:00","totalHours":0.5,"subtotal":3.7,"message":"Hi Sachin, I like to request a booking for 30 mins. Kindly accept my request. Thanks, Sajith","paymentStatus":"funds-released","paymentIntentId":"pi_3RkcELLwSJaEWymt1BvCYrcG","status":"Reserved","recurring_booking_id":null,"createdAt":"2025-07-13T21:42:52.161Z","updatedAt":"2025-07-13T21:42:52.161Z","createdBy":1022,"extras":[],"nid":"BK_140725_64","charges":{"finalCost":"3.30","bookingFee":"0.30","flatAmount":"0.30","finalAmount":"3.70","totalStripeFee":"0.40","percentageAmount":"0.10"}}
+{"id":"wCRflCRl0DpcBN9JgPiB0f","charger_id":"GPkFB_jx8E_9bLVBgQXB-B","arriveDate":"2025-07-19","startTime":"2025-07-19T21:00:00","endTime":"2025-07-19T21:30:00","totalHours":0.5,"subtotal":3.13,"message":"Hi, I like to reserve your charger  and like to park at your location. ","paymentStatus":"cancelled","paymentIntentId":"pi_3RmjyOLwSJaEWymt0f8NdaO9","status":"CancelledByHost","recurring_booking_id":null,"createdAt":"2025-07-19T18:28:08.157Z","updatedAt":"2025-07-19T18:28:08.157Z","createdBy":19,"extras":[{"id":"0uKDonMzLrBtavUbA-4WUg","name":"Car wash","price":10,"enabled":false,"flatFee":false,"totalHours":"0.50"}],"nid":"BK_190725_70","charges":{"finalCost":"2.75","bookingFee":"0.25","flatAmount":"0.30","finalAmount":"3.13","totalStripeFee":"0.38","percentageAmount":"0.08"}}
+{"id":"npJ4bjz6WWPOlb4KZkoGqU","charger_id":"GPkFB_jx8E_9bLVBgQXB-B","arriveDate":"2025-07-19","startTime":"2025-07-19T09:00:00","endTime":"2025-07-19T09:30:00","totalHours":0.5,"subtotal":3.13,"message":"Hi Praveen, kindly accept my request. ","paymentStatus":"captured","paymentIntentId":"pi_3RmkKRLwSJaEWymt1aZcuIrf","status":"Reserved","recurring_booking_id":null,"createdAt":"2025-07-19T18:40:56.465Z","updatedAt":"2025-07-19T18:40:56.465Z","createdBy":19,"extras":[{"id":"0uKDonMzLrBtavUbA-4WUg","name":"Car wash","price":10,"enabled":false,"flatFee":false,"totalHours":"0.50"}],"nid":"BK_190725_71","charges":{"finalCost":"2.75","bookingFee":"0.25","flatAmount":"0.30","finalAmount":"3.13","totalStripeFee":"0.38","percentageAmount":"0.08"}}
+{"id":"Lfhk-KbMH5fmlo6WAHqz2h","charger_id":"WG0ejIuus4SP1kDIMI6YzR","arriveDate":"2025-08-07","startTime":"2025-08-07T09:00:00","endTime":"2025-08-07T09:30:00","totalHours":0.5,"subtotal":3.13,"message":"Hi, I will park after an hour. \nIs it ok? ","paymentStatus":"funds-released","paymentIntentId":"pi_3RtSxnLwSJaEWymt09QHi0h9","status":"Reserved","recurring_booking_id":null,"createdAt":"2025-08-07T07:32:02.168Z","updatedAt":"2025-08-07T07:32:02.168Z","createdBy":1022,"extras":[{"id":"R8bd_VZ2cySBeFX-kZZpXd","name":"Coke","price":1,"enabled":false,"flatFee":true,"totalHours":"0.50"}],"nid":"BK_070825_84","charges":{"finalCost":"2.75","bookingFee":"0.25","flatAmount":"0.30","finalAmount":"3.13","totalStripeFee":"0.38","percentageAmount":"0.08"}}
+
+--- Sample ChargerListing (5 rows) ---
+Columns: id, createdBy, title, description, connectorType, powerOutput, voltage, amperage, NumofLevel2Chargers, NumofDCFastChargers, pricePerHour, weekendPrice, smokingAllowed, cancellationPolicy, amenities, facilities, createdAt, updatedAt, address, deleted, disabled, draft, published, lat, lng, networkType, facilityType, iid, nid, is24Hours, zipcode
+{"id":"gg7Ho4VVWHjjdUSSSWf70E","createdBy":1314,"title":"Sai","description":"Test","connectorType":"CHAdeMo","powerOutput":7,"voltage":240,"amperage":50,"NumofLevel2Chargers":1,"NumofDCFastChargers":0,"pricePerHour":3,"weekendPrice":null,"smokingAllowed":false,"cancellationPolicy":"","amenities":["Chairs","Wi-Fi"],"facilities":["Free Security"],"createdAt":"2025-11-15T10:36:25.872Z","updatedAt":"2025-11-15T10:36:25.872Z","address":"3402 Tulane Dr, Hyattsville, MD 20783, USA","deleted":false,"disabled":false,"draft":false,"published":true,"lat":38.984952,"lng":-76.95844389999999,"networkType":"Chargerzilla Network","facilityType":"Home","iid":163153,"nid":null,"is24Hours":false,"zipcode":null}
+{"id":"V4Ezb9F5mJ6LN59dPqF5HV","createdBy":1253,"title":"McCaffrey Station ","description":"Welcome! Please park on the right hand side of the driveway. Please knock on the door if there is a car in the right hand side of the driveway. PLEASE DO NOT park on the left hand side of the driveway.\n\nCharge rate is up to 3 -5  kwh and up to 20 amps.","connectorType":"J1772","powerOutput":5,"voltage":240,"amperage":20,"NumofLevel2Chargers":1,"NumofDCFastChargers":0,"pricePerHour":2,"weekendPrice":2,"smokingAllowed":false,"cancellationPolicy":"","amenities":["Seating on the porch"],"facilities":["Near Ray Twinney Complex"],"createdAt":"2025-10-23T07:22:32.832Z","updatedAt":"2025-10-23T07:22:32.832Z","address":"244 McCaffrey Rd, Newmarket, ON L3X 1J3, Canada","deleted":false,"disabled":false,"draft":false,"published":true,"lat":44.041629490704935,"lng":-79.48832245543599,"networkType":"Chargerzilla Network","facilityType":"Home","iid":163142,"nid":null,"is24Hours":false,"zipcode":null}
+{"id":"Kg-W3BVF3f1QOyO_AJSL-F","createdBy":148,"title":"Sachin house","description":"Tesla charger","connectorType":"Tesla (NACS)","powerOutput":20,"voltage":240,"amperage":30,"NumofLevel2Chargers":1,"NumofDCFastChargers":0,"pricePerHour":5,"weekendPrice":5,"smokingAllowed":false,"cancellationPolicy":"","amenities":["Wi-Fi","Water"],"facilities":["Street level access"],"createdAt":"2025-07-12T09:59:13.335Z","updatedAt":"2025-07-12T09:59:13.335Z","address":"10 Sadie Cir, Union, NJ 07083, USA","deleted":false,"disabled":false,"draft":false,"published":true,"lat":40.6852947,"lng":-74.2318034,"networkType":"Chargerzilla network","facilityType":"Home","iid":162996,"nid":null,"is24Hours":true,"zipcode":null}
+{"id":"nHahRi6YW0xoteQRkA4168","createdBy":1301,"title":"ASas","description":"asas","connectorType":"CCS,CHAdeMo","powerOutput":9,"voltage":240,"amperage":40,"NumofLevel2Chargers":1,"NumofDCFastChargers":0,"pricePerHour":23,"weekendPrice":23,"smokingAllowed":false,"cancellationPolicy":"","amenities":["Chairs","Phone Charger"],"facilities":["Reception","Public Transportation"],"createdAt":"2025-11-12T16:42:04.607Z","updatedAt":"2025-11-12T16:42:04.607Z","address":"Beştepe, AŞTİ, 06560 Yenimahalle/Ankara, Türkiye","deleted":false,"disabled":false,"draft":true,"published":false,"lat":39.9186871,"lng":32.8100028,"networkType":"Chargerzilla Network","facilityType":"Retail","iid":163148,"nid":null,"is24Hours":true,"zipcode":null}
+{"id":"GPkFB_jx8E_9bLVBgQXB-B","createdBy":403,"title":"440 charger","description":"My charger","connectorType":"Tesla (NACS),J1772,CCS,CHAdeMo","powerOutput":6,"voltage":240,"amperage":30,"NumofLevel2Chargers":2,"NumofDCFastChargers":0,"pricePerHour":5,"weekendPrice":5,"smokingAllowed":false,"cancellationPolicy":"","amenities":["Chairs","Tables","Phone Charger"],"facilities":["Free Security","Reception","Street level access"],"createdAt":"2025-07-18T14:38:39.079Z","updatedAt":"2025-07-18T14:38:39.079Z","address":"440 Davis Ct, San Francisco, CA 94111, USA","deleted":false,"disabled":false,"draft":false,"published":true,"lat":37.7966182,"lng":-122.3981057,"networkType":"Chargerzilla network","facilityType":"Home","iid":163026,"nid":null,"is24Hours":true,"zipcode":null}
+
+--- Sample ChargerMedia (5 rows) ---
+Columns: id, url, charger_id
+{"id":"LNWpWjzOL5MuTKvhBkM-As","url":"https://pub-01bd60b79cba45fcab1f157df9248901.r2.dev/ChargerImages-users/1760119526239-image0.jpg","charger_id":"vYOPE6YPnxI1Fom6GFKbTG"}
+{"id":"163_nAfgoNmI-zwcoUJSEM","url":"https://pub-01bd60b79cba45fcab1f157df9248901.r2.dev/ChargerImages-users/1752332352772-image0.jpg","charger_id":"Kg-W3BVF3f1QOyO_AJSL-F"}
+{"id":"3GUBFIAAZyeAZsevwraTac","url":"https://pub-01bd60b79cba45fcab1f157df9248901.r2.dev/ChargerImages-users/1755116103680-image0.jpg","charger_id":"WG0ejIuus4SP1kDIMI6YzR"}
+{"id":"hG-A3gPjgSi3RerKFKhIGT","url":"https://pub-01bd60b79cba45fcab1f157df9248901.r2.dev/ChargerImages-users/1755116103692-image1.jpg","charger_id":"WG0ejIuus4SP1kDIMI6YzR"}
+{"id":"DD0ZXak7Pjf3zcP0XZpTGa","url":"https://pub-01bd60b79cba45fcab1f157df9248901.r2.dev/ChargerImages-users/1760119526280-image1.jpg","charger_id":"vYOPE6YPnxI1Fom6GFKbTG"}
