@@ -154,6 +154,23 @@ router.get('/public/:id', auth, stationController.getPublicStationById);
 router.patch('/public/:id', auth, stationController.updatePublicStation);
 router.put('/public/:id', auth, stationController.updatePublicStation);
 
+/**
+ * @swagger
+ * /api/admin/stations/public/{id}/media:
+ *   delete:
+ *     summary: Delete Public Station Image
+ *     tags: [Public Stations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Image removed from station
+ */
+router.delete('/public/:id/media', auth, stationController.deletePublicStationMedia);
+
 // ==========================================
 // PRIVATE CHARGERS (User Added)
 // ==========================================
