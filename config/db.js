@@ -33,7 +33,10 @@ sequelize.authenticate()
         console.log('Database connection has been established successfully.');
     })
     .catch(err => {
-        console.error('Unable to connect to the database:', err);
+        console.error('CRITICAL: Unable to connect to the database!');
+        console.error('Error details:', err.message);
+        console.error('Host:', process.env.DB_HOST);
+        // Note: Do not log password here for security
     });
 
 module.exports = sequelize;

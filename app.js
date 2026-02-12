@@ -91,11 +91,13 @@ app.use((err, req, res, next) => {
     res.status(500).json({ success: false, error: 'Server Error', details: err.message });
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Swagger Docs available at http://localhost:${PORT}/api-docs`);
-});
+// Only start the server if not running on Vercel
+if (!process.env.VERCEL) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server running locally on port ${PORT}`);
+        console.log(`Swagger Docs available at http://localhost:${PORT}/api-docs`);
+    });
+}
 
 module.exports = app;
