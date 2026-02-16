@@ -1,85 +1,98 @@
 const {
     User, Booking, ChargerListing, PublicStation, StationReview,
-    Checkin, FacilityType, City, sequelize
+    Checkin, NetworkType, FacilityType, City, State, sequelize
 } = require('../../models');
 const { Op } = require('sequelize');
 
 /**
- * @desc Get comprehensive dashboard statistics for administrators
+ * @desc Get comprehensive dashboard statistics for administrators (Deep Analytics)
  * @route GET /api/admin/dashboard
  */
 exports.getDashboardData = async (req, res) => {
     try {
         const now = new Date();
         const thirtyDaysAgo = new Date(new Date().setDate(now.getDate() - 30));
-        const sevenDaysAgo = new Date(new Date().setDate(now.getDate() - 7));
 
-        // 1. OVERVIEW SUMMARY (God View)
+        // 1. GOD-VIEW SUMMARY COUNTS
         const [
             totalUsers,
             totalPublicStations,
             totalPrivateChargers,
             totalBookings,
-            revenueData,
-            activeHostsCount,
+            totalRevenue,
             verifiedUsers,
             totalReviews,
-            totalCheckins
+            totalCheckins,
+            totalHosts,
+            activeBookings
         ] = await Promise.all([
             User.count(),
             PublicStation.count(),
             ChargerListing.count({ where: { deleted: false } }),
             Booking.count(),
             Booking.sum('subtotal', { where: { paymentStatus: { [Op.iLike]: '%captured%' } } }),
-            User.count({ where: { role: 'host' } }),
             User.count({ where: { isEmailVerified: true } }),
             StationReview.count(),
-            Checkin.count()
+            Checkin.count(),
+            User.count({ where: { role: 'host' } }),
+            Booking.count({ where: { status: 'Confirmed' } })
         ]);
 
-        // 2. DETAILED BREAKDOWNS (Decision-Making Data)
+        // 2. GEOGRAPHIC DISTRIBUTION (Graph Ready)
 
-        // Booking Status Breakdown
-        const bookingBreakdown = await Booking.findAll({
-            attributes: ['status', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-            group: ['status']
+        // Stations by State (Top 15)
+        const stationsByState = await PublicStation.findAll({
+            include: [{
+                model: City, as: 'city',
+                include: [{ model: State, as: 'state', attributes: ['state_name'] }]
+            }],
+            attributes: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'count']],
+            group: ['city.id', 'city->state.id', 'city->state.state_name'],
+            order: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'DESC']],
+            limit: 15,
+            subQuery: false
         });
 
-        // User Account Type Spread
-        const userTypeSpread = await User.findAll({
-            attributes: ['account_type', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-            group: ['account_type']
+        // Top 20 Cities by Station Count
+        const stationsByCity = await PublicStation.findAll({
+            include: [{ model: City, as: 'city', attributes: ['city_name'] }],
+            attributes: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'count']],
+            group: ['city.id', 'city.city_name'],
+            order: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'DESC']],
+            limit: 20,
+            subQuery: false
         });
 
-        // Public Station Speed Levels
-        const stationLevels = await PublicStation.findAll({
-            attributes: ['level', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-            group: ['level']
+        // 3. INFRASTRUCTURE & NETWORK (Depth)
+
+        // Network Distribution (Market Share)
+        const networkSpread = await PublicStation.findAll({
+            include: [{ model: NetworkType, as: 'network', attributes: ['network_name'] }],
+            attributes: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'count']],
+            group: ['network.id', 'network.network_name'],
+            order: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'DESC']],
         });
 
-
-        // Facility Distribution (Top 10)
-        const facilityDistribution = await PublicStation.findAll({
+        // Facility Type Usage
+        const facilitySpread = await PublicStation.findAll({
             include: [{ model: FacilityType, as: 'facility', attributes: ['facility_name'] }],
             attributes: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'count']],
             group: ['facility.id', 'facility.facility_name'],
             order: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'DESC']],
-            limit: 10
         });
 
-        // Private Charger Connector Breakdown
-        // Since connectorType is a string/csv, we'll do a simple count of occurrences
-        const chargerConnectors = await ChargerListing.findAll({
-            attributes: ['connectorType', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-            where: { deleted: false },
-            group: ['connectorType']
+        // Speed Level Distribution (L1, L2, DC Fast)
+        const speedLevels = await PublicStation.findAll({
+            attributes: ['level', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+            group: ['level'],
+            order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
         });
 
-        // 3. TRENDS
-        // Recent Signups (30 Days)
+        // 4. REVENUE & USER GROWTH TRENDS (Last 30 Days)
+
         const signupTrend = await User.findAll({
             attributes: [
-                [sequelize.fn('DATE', sequelize.col('created_at')), 'result_date'],
+                [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
                 [sequelize.fn('COUNT', sequelize.col('id')), 'count']
             ],
             where: { createdAt: { [Op.gte]: thirtyDaysAgo } },
@@ -87,12 +100,11 @@ exports.getDashboardData = async (req, res) => {
             order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
         });
 
-        // Revenue & Booking Count Trend (30 Days)
         const revenueTrend = await Booking.findAll({
             attributes: [
-                [sequelize.fn('DATE', sequelize.col('createdAt')), 'result_date'],
-                [sequelize.fn('SUM', sequelize.col('subtotal')), 'total_revenue'],
-                [sequelize.fn('COUNT', sequelize.col('id')), 'booking_count']
+                [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+                [sequelize.fn('SUM', sequelize.col('subtotal')), 'revenue'],
+                [sequelize.fn('COUNT', sequelize.col('id')), 'bookings']
             ],
             where: {
                 createdAt: { [Op.gte]: thirtyDaysAgo },
@@ -102,77 +114,66 @@ exports.getDashboardData = async (req, res) => {
             order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
         });
 
-        // 4. TOP PERFORMERS & QUALITY
-        // Cities by High Check-in Activity
-        const busyCities = await Checkin.findAll({
-            include: [{
-                model: PublicStation,
-                as: 'station',
-                include: [{ model: City, as: 'city', attributes: ['city_name'] }]
-            }],
-            attributes: [[sequelize.fn('COUNT', sequelize.col('Checkin.id')), 'checkin_count']],
-            group: ['station.id', 'station.city_id', 'station->city.id', 'station->city.city_name'],
-            order: [[sequelize.fn('COUNT', sequelize.col('Checkin.id')), 'DESC']],
-            limit: 5,
-            subQuery: false
-        });
-
-        // Recent Bookings for Feed
-        const recentBookings = await Booking.findAll({
+        // 5. ACTIVITY FEED & RECENT
+        const recentActivity = await Booking.findAll({
             limit: 10,
             order: [['createdAt', 'DESC']],
             include: [
-                { model: User, as: 'guest', attributes: ['id', 'name', 'email'] },
-                { model: ChargerListing, as: 'charger', attributes: ['id', 'title'] }
+                { model: User, as: 'guest', attributes: ['name', 'email'] },
+                { model: ChargerListing, as: 'charger', attributes: ['title'] }
             ]
         });
 
         res.status(200).json({
             success: true,
             data: {
-                summary: {
-                    total_users: totalUsers,
-                    verified_users: verifiedUsers,
-                    total_hosts: activeHostsCount,
-                    total_public_stations: totalPublicStations,
-                    total_private_chargers: totalPrivateChargers,
-                    total_bookings: totalBookings,
-                    total_reviews: totalReviews,
-                    total_checkins: totalCheckins,
-                    net_revenue: revenueData || 0,
-                    platform_fees_est: (revenueData || 0) * 0.15 // 15% platform commission
+                kpi: {
+                    users: { total: totalUsers, verified: verifiedUsers, hosts: totalHosts },
+                    infrastructure: { public: totalPublicStations, private: totalPrivateChargers },
+                    bookings: { total: totalBookings, active: activeBookings },
+                    social: { reviews: totalReviews, checkins: totalCheckins },
+                    finance: {
+                        gross_revenue: totalRevenue || 0,
+                        platform_revenue: (totalRevenue || 0) * 0.15
+                    }
                 },
-                financials: {
-                    avg_booking_value: totalBookings > 0 ? (revenueData / totalBookings) : 0,
-                    thirty_day_growth_rate: "N/A" // Placeholder for complex calc
-                },
-                spreads: {
-                    booking_statuses: bookingBreakdown,
-                    account_types: userTypeSpread,
-                    charging_levels: stationLevels,
-                    top_facilities: facilityDistribution.map(f => ({ name: f.facility ? f.facility.facility_name : 'Unknown', count: f.get('count') })),
-                    charger_connectors: chargerConnectors
-                },
-                growth: {
-                    signups: signupTrend,
-                    revenue: revenueTrend
-                },
-                activity: {
-                    hot_zones: busyCities.map(c => ({
-                        city: c.station?.city?.city_name || 'Generic Zone',
-                        station: c.station?.station_name,
-                        checkins: c.get('checkin_count')
+                geography: {
+                    states: stationsByState.map(s => ({
+                        name: s.city?.state?.state_name || 'Other',
+                        value: parseInt(s.get('count'))
                     })),
-                    feed: recentBookings
-                }
+                    cities: stationsByCity.map(c => ({
+                        name: c.city?.city_name || 'Unknown',
+                        value: parseInt(c.get('count'))
+                    }))
+                },
+                infrastructure_depth: {
+                    networks: networkSpread.map(n => ({
+                        brand: n.network?.network_name || 'Independent',
+                        count: parseInt(n.get('count'))
+                    })),
+                    facilities: facilitySpread.map(f => ({
+                        type: f.facility?.facility_name || 'General',
+                        count: parseInt(f.get('count'))
+                    })),
+                    charging_speeds: speedLevels.map(l => ({
+                        level: l.level || 'Unknown',
+                        count: parseInt(l.get('count'))
+                    }))
+                },
+                performance: {
+                    user_growth: signupTrend,
+                    revenue_growth: revenueTrend
+                },
+                feed: recentActivity
             }
         });
 
     } catch (error) {
-        console.error('CRITICAL: Dashboard Compilation Error:', error);
+        console.error('CRITICAL: Dashboard Sync Error:', error);
         res.status(500).json({
             success: false,
-            error: 'Database Analytic Engine Failure',
+            error: 'Analytics Engine Error',
             details: error.message
         });
     }
