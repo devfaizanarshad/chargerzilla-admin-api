@@ -1,5 +1,6 @@
 const {
-    User, Booking, ChargerListing, PublicStation, StationReview, sequelize
+    User, Booking, ChargerListing, PublicStation, StationReview,
+    Checkin, NetworkType, FacilityType, City, sequelize
 } = require('../../models');
 const { Op } = require('sequelize');
 
