@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const stationController = require('../../controllers/admin/stationController');
 const auth = require('../../middleware/auth');
+
+// Multer memory storage (we'll forward to Cloudflare)
+const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * @swagger
@@ -147,6 +151,67 @@ router.get('/public/:id', auth, stationController.getPublicStationById);
  *               nema1450: { type: integer }
  *               nema515: { type: integer }
  *               nema520: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Station updated successfully
+ */
+/**
+ * @swagger
+ * /api/admin/stations/public/{id}/activate:
+ *   post:
+ *     summary: Activate Public Station (Set online and Active status)
+ *     tags: [Public Stations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Station activated and cache purged
+ */
+router.post('/public/:id/activate', auth, stationController.activatePublicStation);
+
+/**
+ * @swagger
+ * /api/admin/stations/public/{id}/deactivate:
+ *   post:
+ *     summary: Deactivate/Decommission Public Station (Set offline and Decommissioned status)
+ *     tags: [Public Stations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Station decommissioned and cache purged
+ */
+router.post('/public/:id/deactivate', auth, stationController.decommissionPublicStation);
+
+/**
+ * @swagger
+ * /api/admin/stations/public/{id}:
+ *   patch:
+ *     summary: Edit Public Station (Flat Structure)
+ *     tags: [Public Stations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               station_name: { type: string }
+ *               online: { type: boolean }
+ *               pricing: { type: string }
+ *               access: { type: string }
+ *               network_type_id: { type: integer }
+ *               facility_type_id: { type: integer }
  *     responses:
  *       200:
  *         description: Station updated successfully
@@ -321,6 +386,58 @@ router.put('/private/:id', auth, stationController.updatePrivateCharger);
  *         description: Status toggled
  */
 router.patch('/private/:id', auth, stationController.updatePrivateChargerStatus);
+
+/**
+ * @swagger
+ * /api/admin/stations/public/{id}/image:
+ *   post:
+ *     summary: Upload and update Public Station image
+ *     tags: [Public Stations]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded and DB updated
+ */
+router.post('/public/:id/image', auth, upload.single('image'), stationController.uploadPublicStationImage);
+
+/**
+ * @swagger
+ * /api/admin/stations/private/{id}/media:
+ *   post:
+ *     summary: Add image to Private Charger gallery
+ *     tags: [Private Chargers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Media added to gallery
+ */
+router.post('/private/:id/media', auth, upload.single('image'), stationController.uploadPrivateChargerMedia);
 
 router.delete('/private/:id/media/:mediaId', auth, stationController.deleteChargerMedia);
 

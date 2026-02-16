@@ -329,6 +329,43 @@
         }
       }
     },
+    "/api/admin/dashboard": {
+      "get": {
+        "summary": "Get all dashboard metrics (Trends, Revenue, Health)",
+        "tags": [
+          "Dashboard"
+        ],
+        "responses": {
+          "200": {
+            "description": "Full dashboard data payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "overview": {
+                      "type": "object"
+                    },
+                    "trends": {
+                      "type": "object"
+                    },
+                    "health": {
+                      "type": "object"
+                    },
+                    "geographic": {
+                      "type": "object"
+                    },
+                    "recent_activity": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/metadata": {
       "get": {
         "summary": "Get all valid lookup values for administrator filters",
@@ -481,8 +518,8 @@
           }
         }
       },
-      "put": {
-        "summary": "Edit Public Station (Maximum Control)",
+      "patch": {
+        "summary": "Edit Public Station (Flat Structure)",
         "tags": [
           "Public Stations"
         ],
@@ -505,20 +542,52 @@
                   "station_name": {
                     "type": "string"
                   },
-                  "street_address": {
-                    "type": "string"
-                  },
-                  "status": {
-                    "type": "string"
-                  },
                   "online": {
                     "type": "boolean"
                   },
                   "pricing": {
                     "type": "string"
                   },
+                  "access": {
+                    "type": "string"
+                  },
+                  "network_type_id": {
+                    "type": "integer"
+                  },
+                  "facility_type_id": {
+                    "type": "integer"
+                  },
+                  "street_address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "zip": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "L1",
+                      "L2",
+                      "FAST Charger"
+                    ]
+                  },
                   "total_ports": {
                     "type": "integer"
+                  },
+                  "status": {
+                    "type": "string"
                   },
                   "chademo": {
                     "type": "integer"
@@ -527,6 +596,18 @@
                     "type": "integer"
                   },
                   "tesla": {
+                    "type": "integer"
+                  },
+                  "j1772": {
+                    "type": "integer"
+                  },
+                  "nema1450": {
+                    "type": "integer"
+                  },
+                  "nema515": {
+                    "type": "integer"
+                  },
+                  "nema520": {
                     "type": "integer"
                   }
                 }
@@ -537,6 +618,75 @@
         "responses": {
           "200": {
             "description": "Station updated successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/public/{id}/activate": {
+      "post": {
+        "summary": "Activate Public Station (Set online and Active status)",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station activated and cache purged"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/public/{id}/deactivate": {
+      "post": {
+        "summary": "Deactivate/Decommission Public Station (Set offline and Decommissioned status)",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station decommissioned and cache purged"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/public/{id}/media": {
+      "delete": {
+        "summary": "Delete Public Station Image",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image removed from station"
           }
         }
       }
@@ -646,7 +796,7 @@
         }
       },
       "put": {
-        "summary": "Edit Private Charger Details",
+        "summary": "Edit Private Charger (Nested Structure)",
         "tags": [
           "Private Chargers"
         ],
@@ -666,42 +816,108 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "title": {
-                    "type": "string"
+                  "identity": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "object",
+                        "properties": {
+                          "published": {
+                            "type": "boolean"
+                          },
+                          "disabled": {
+                            "type": "boolean"
+                          },
+                          "draft": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
                   },
-                  "description": {
-                    "type": "string"
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "address": {
+                        "type": "string"
+                      },
+                      "coordinates": {
+                        "type": "object",
+                        "properties": {
+                          "lat": {
+                            "type": "number"
+                          },
+                          "lng": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
                   },
-                  "address": {
-                    "type": "string"
+                  "pricing": {
+                    "type": "object",
+                    "properties": {
+                      "hourly": {
+                        "type": "number"
+                      },
+                      "weekend": {
+                        "type": "number"
+                      },
+                      "cancellation_policy": {
+                        "type": "string"
+                      }
+                    }
                   },
-                  "pricePerHour": {
-                    "type": "number"
+                  "specs": {
+                    "type": "object",
+                    "properties": {
+                      "connector_type": {
+                        "type": "string"
+                      },
+                      "power_output_kw": {
+                        "type": "number"
+                      },
+                      "voltage": {
+                        "type": "integer"
+                      },
+                      "amperage": {
+                        "type": "integer"
+                      },
+                      "ports": {
+                        "type": "object",
+                        "properties": {
+                          "l2": {
+                            "type": "integer"
+                          },
+                          "dc": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
                   },
-                  "weekendPrice": {
-                    "type": "number"
-                  },
-                  "connectorType": {
-                    "type": "string",
-                    "description": "CSV like J1772,CCS"
-                  },
-                  "powerOutput": {
-                    "type": "number"
-                  },
-                  "voltage": {
-                    "type": "integer"
-                  },
-                  "amperage": {
-                    "type": "integer"
-                  },
-                  "published": {
-                    "type": "boolean"
-                  },
-                  "disabled": {
-                    "type": "boolean"
-                  },
-                  "access": {
-                    "type": "string"
+                  "amenities": {
+                    "type": "object",
+                    "properties": {
+                      "list": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "facilities": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -749,6 +965,82 @@
         "responses": {
           "200": {
             "description": "Status toggled"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/public/{id}/image": {
+      "post": {
+        "summary": "Upload and update Public Station image",
+        "tags": [
+          "Public Stations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded and DB updated"
+          }
+        }
+      }
+    },
+    "/api/admin/stations/private/{id}/media": {
+      "post": {
+        "summary": "Add image to Private Charger gallery",
+        "tags": [
+          "Private Chargers"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Media added to gallery"
           }
         }
       }
@@ -953,6 +1245,10 @@
     {
       "name": "Bookings",
       "description": "Booking management and financial analytics"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Administrative analytics and oversight"
     },
     {
       "name": "Metadata",

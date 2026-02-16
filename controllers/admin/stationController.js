@@ -1,4 +1,5 @@
 const models = require('../../models');
+const { purgeCache, uploadImage, deleteImage } = require('../../utils/cloudflare');
 const {
     ChargerListing, PublicStation, User, ChargerMedia, Booking, StationReview,
     City, State, Zipcode, NetworkType, FacilityType, ChargerTiming, ChargerDay, Conversation, Message,
@@ -185,6 +186,62 @@ exports.getPublicStationById = async (req, res) => {
     }
 };
 
+exports.decommissionPublicStation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const station = await PublicStation.findByPk(id);
+        if (!station) return res.status(404).json({ success: false, error: 'Station not found' });
+
+        station.online = false;
+        station.status = 'Decommissioned';
+        await station.save();
+
+        // Flush Cloudflare Cache
+        try {
+            await purgeCache();
+        } catch (purgeError) {
+            console.error('[STATION] Database updated but Cloudflare purge failed:', purgeError.message);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Station decommissioned and marked offline. Cache purged.',
+            data: station
+        });
+    } catch (error) {
+        console.error('Error decommissioning station:', error);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
+exports.activatePublicStation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const station = await PublicStation.findByPk(id);
+        if (!station) return res.status(404).json({ success: false, error: 'Station not found' });
+
+        station.online = true;
+        station.status = 'Active';
+        await station.save();
+
+        // Flush Cloudflare Cache
+        try {
+            await purgeCache();
+        } catch (purgeError) {
+            console.error('[STATION] Database updated but Cloudflare purge failed:', purgeError.message);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Station activated and marked online. Cache purged.',
+            data: station
+        });
+    } catch (error) {
+        console.error('Error activating station:', error);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
 exports.updatePublicStation = async (req, res) => {
     try {
         const { id } = req.params;
@@ -209,6 +266,14 @@ exports.updatePublicStation = async (req, res) => {
         }
 
         await station.save();
+
+        // Flush Cloudflare Cache on update
+        try {
+            await purgeCache();
+        } catch (purgeError) {
+            console.error('[STATION] Update saved but cache purge failed.');
+        }
+
         res.status(200).json({ success: true, data: station, message: 'Station updated successfully' });
     } catch (error) {
         console.error('Error updating public station:', error);
@@ -548,38 +613,42 @@ exports.updatePrivateChargerStatus = async (req, res) => {
     }
 };
 
+/**
+ * Helper to extract Cloudflare Image ID from URL
+ * Supports: https://imagedelivery.net/<HASH>/<IMAGE_ID>/<VARIANT>
+ */
+const extractCloudflareId = (url) => {
+    if (!url) return null;
+    const parts = url.split('/');
+    // Check if it's a Cloudflare image delivery URL
+    if (url.includes('imagedelivery.net') && parts.length >= 5) {
+        return parts[4]; // The ID is usually the 5th part
+    }
+    return null;
+};
+
 exports.deleteChargerMedia = async (req, res) => {
     try {
         const { id, mediaId } = req.params;
-
-        // Find the media record
         const media = await ChargerMedia.findByPk(mediaId);
 
         if (!media) {
             return res.status(404).json({ success: false, error: 'Media record not found' });
         }
 
-        // --- Validation: Ensure media belongs to the station in URL ---
-        // This prevents accidental/malicious deletion of images from other stations
         if (media.charger_id !== id) {
-            return res.status(403).json({
-                success: false,
-                error: 'Authorization failed: This image does not belong to the specified charger station.'
-            });
+            return res.status(403).json({ success: false, error: 'Authorization failed' });
         }
 
-        // --- Cloud Storage Cleanup (Placeholder) ---
-        // Note: When Cloudflare integration is ready, we will add the 
-        // disk/bucket deletion logic here using the media.path or media.url.
-        // console.log(`[TODO] Delete physical file from Cloudflare: ${media.url}`);
+        // Delete from Cloudflare
+        const cloudflareId = extractCloudflareId(media.url);
+        if (cloudflareId) {
+            console.log(`[CLOUDFLARE] Deleting image ID: ${cloudflareId}`);
+            await deleteImage(cloudflareId);
+        }
 
-        // Remove from Database
         await media.destroy();
-
-        res.status(200).json({
-            success: true,
-            message: 'Image successfully removed from the registry.'
-        });
+        res.status(200).json({ success: true, message: 'Image deleted from Cloudflare and DB.' });
     } catch (error) {
         console.error('Error deleting media:', error);
         res.status(500).json({ success: false, error: 'Server error' });
@@ -595,21 +664,81 @@ exports.deletePublicStationMedia = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Public station not found' });
         }
 
-        // --- Cloud Storage Cleanup (Placeholder) ---
-        // station.station_image contains the URL
-        // console.log(`[TODO] Delete station image from Cloudflare: ${station.station_image}`);
+        // Delete from Cloudflare
+        const cloudflareId = extractCloudflareId(station.station_image);
+        if (cloudflareId) {
+            console.log(`[CLOUDFLARE] Deleting station image ID: ${cloudflareId}`);
+            await deleteImage(cloudflareId);
+        }
 
-        // Remove the reference from the database
         station.station_image = null;
+        await station.save();
+
+        res.status(200).json({ success: true, message: 'Station image deleted from Cloudflare and DB.' });
+    } catch (error) {
+        console.error('Error deleting public station media:', error);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
+exports.uploadPublicStationImage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!req.file) return res.status(400).json({ success: false, error: 'No image file provided' });
+
+        const station = await PublicStation.findByPk(id);
+        if (!station) return res.status(404).json({ success: false, error: 'Station not found' });
+
+        // 1. Delete old image if exists
+        const oldId = extractCloudflareId(station.station_image);
+        if (oldId) await deleteImage(oldId);
+
+        // 2. Upload new image
+        const result = await uploadImage(req.file.buffer, `station_${id}_${Date.now()}`);
+
+        // 3. Update DB
+        // result.variants[0] is usually the public URL
+        station.station_image = result.variants[0];
         await station.save();
 
         res.status(200).json({
             success: true,
-            message: 'Public station image has been removed from the registry.'
+            message: 'Image uploaded to Cloudflare and updated in DB',
+            url: station.station_image
         });
     } catch (error) {
-        console.error('Error deleting public station media:', error);
-        res.status(500).json({ success: false, error: 'Server error' });
+        console.error('Error in station image upload:', error);
+        res.status(500).json({ success: false, error: 'Upload process failed' });
+    }
+};
+
+exports.uploadPrivateChargerMedia = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!req.file) return res.status(400).json({ success: false, error: 'No image file provided' });
+
+        const charger = await ChargerListing.findByPk(id);
+        if (!charger) return res.status(404).json({ success: false, error: 'Charger not found' });
+
+        // Upload to Cloudflare
+        const result = await uploadImage(req.file.buffer, `charger_${id}_${Date.now()}`);
+
+        // Save to ChargerMedia table
+        // We use the record's ID from Cloudflare as the DB ID for easy tracking
+        const newMedia = await ChargerMedia.create({
+            id: result.id,
+            charger_id: id,
+            url: result.variants[0]
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Media uploaded to Cloudflare and added to gallery',
+            data: newMedia
+        });
+    } catch (error) {
+        console.error('Error in charger media upload:', error);
+        res.status(500).json({ success: false, error: 'Upload process failed' });
     }
 };
 

@@ -92,6 +92,7 @@ app.get('/api/admin/ping', (req, res) => res.json({ success: true, message: 'pon
 app.use('/api/admin/users', require('./routes/admin/users'));
 app.use('/api/admin/bookings', require('./routes/admin/bookings'));
 app.use('/api/admin/stations', require('./routes/admin/stations'));
+app.use('/api/admin/dashboard', require('./routes/admin/dashboard'));
 app.use('/api/admin/metadata', (req, res, next) => {
     console.log(`[DEBUG] Metadata Request: ${req.method} ${req.url}`);
     next();
