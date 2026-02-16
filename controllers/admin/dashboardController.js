@@ -88,7 +88,27 @@ exports.getDashboardData = async (req, res) => {
             order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
         });
 
-        // 4. REVENUE & USER GROWTH TRENDS (Last 30 Days)
+        // 4. AMENITIES & FACILITIES (Private)
+        const privateChargers = await ChargerListing.findAll({
+            where: { deleted: false },
+            attributes: ['amenities']
+        });
+
+        const amenityCounts = {};
+        privateChargers.forEach(c => {
+            if (c.amenities && Array.isArray(c.amenities)) {
+                c.amenities.forEach(a => {
+                    amenityCounts[a] = (amenityCounts[a] || 0) + 1;
+                });
+            }
+        });
+
+        const amenitySpread = Object.entries(amenityCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        // 5. REVENUE & USER GROWTH TRENDS (Last 30 Days)
 
         const signupTrend = await User.findAll({
             attributes: [
@@ -159,7 +179,8 @@ exports.getDashboardData = async (req, res) => {
                     charging_speeds: speedLevels.map(l => ({
                         level: l.level || 'Unknown',
                         count: parseInt(l.get('count'))
-                    }))
+                    })),
+                    amenities: amenitySpread
                 },
                 performance: {
                     user_growth: signupTrend,
