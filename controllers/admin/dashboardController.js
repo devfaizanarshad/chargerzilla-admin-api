@@ -1,6 +1,6 @@
 const {
     User, Booking, ChargerListing, PublicStation, StationReview,
-    Checkin, NetworkType, FacilityType, City, sequelize
+    Checkin, FacilityType, City, sequelize
 } = require('../../models');
 const { Op } = require('sequelize');
 
@@ -57,14 +57,6 @@ exports.getDashboardData = async (req, res) => {
             group: ['level']
         });
 
-        // Network Distribution (Top 10)
-        const networkDistribution = await PublicStation.findAll({
-            include: [{ model: NetworkType, as: 'network', attributes: ['network_name'] }],
-            attributes: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'count']],
-            group: ['network.id', 'network.network_name'],
-            order: [[sequelize.fn('COUNT', sequelize.col('PublicStation.id')), 'DESC']],
-            limit: 10
-        });
 
         // Facility Distribution (Top 10)
         const facilityDistribution = await PublicStation.findAll({
@@ -158,7 +150,6 @@ exports.getDashboardData = async (req, res) => {
                     booking_statuses: bookingBreakdown,
                     account_types: userTypeSpread,
                     charging_levels: stationLevels,
-                    top_networks: networkDistribution.map(n => ({ name: n.network ? n.network.network_name : 'Unknown', count: n.get('count') })),
                     top_facilities: facilityDistribution.map(f => ({ name: f.facility ? f.facility.facility_name : 'Unknown', count: f.get('count') })),
                     charger_connectors: chargerConnectors
                 },
