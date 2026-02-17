@@ -47,7 +47,7 @@ const purgeCache = async () => {
  * @param {Buffer} fileBuffer - The image file buffer.
  * @param {string} fileName - The name of the file.
  */
-const uploadImage = async (fileBuffer, fileName) => {
+const uploadImage = async (fileBuffer, fileName, mimeType = 'image/jpeg') => {
     try {
         const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
         const apiKey = process.env.CLOUDFLARE_API_KEY;
@@ -57,8 +57,10 @@ const uploadImage = async (fileBuffer, fileName) => {
             throw new Error('Cloudflare credentials missing for image upload');
         }
 
+        console.log(`[CLOUDFLARE] Uploading image: ${fileName} (${mimeType}) to Account: ${accountId}`);
+
         const formData = new FormData();
-        const blob = new Blob([fileBuffer]);
+        const blob = new Blob([fileBuffer], { type: mimeType });
         formData.append('file', blob, fileName);
 
         const response = await axios.post(
@@ -76,11 +78,12 @@ const uploadImage = async (fileBuffer, fileName) => {
             console.log('[CLOUDFLARE] Image uploaded successfully.');
             return response.data.result; // Contains id and variants (urls)
         } else {
-            console.error('[CLOUDFLARE] Image upload failed:', response.data.errors);
-            throw new Error('Cloudflare upload failed');
+            console.error('[CLOUDFLARE] Image upload failed. Response:', JSON.stringify(response.data.errors, null, 2));
+            throw new Error(`Cloudflare upload failed: ${JSON.stringify(response.data.errors)}`);
         }
     } catch (error) {
-        console.error('[CLOUDFLARE] Error during image upload:', error.response ? error.response.data : error.message);
+        const errorData = error.response ? error.response.data : error.message;
+        console.error('[CLOUDFLARE] Error during image upload:', JSON.stringify(errorData, null, 2));
         throw error;
     }
 };
@@ -99,6 +102,8 @@ const deleteImage = async (imageId) => {
             throw new Error('Cloudflare credentials missing for image deletion');
         }
 
+        console.log(`[CLOUDFLARE] Deleting image ID: ${imageId} from Account: ${accountId}`);
+
         const response = await axios.delete(
             `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v1/${imageId}`,
             {
@@ -113,11 +118,12 @@ const deleteImage = async (imageId) => {
             console.log('[CLOUDFLARE] Image deleted successfully.');
             return true;
         } else {
-            console.error('[CLOUDFLARE] Image delete failed:', response.data.errors);
+            console.error('[CLOUDFLARE] Image delete failed:', JSON.stringify(response.data.errors, null, 2));
             return false;
         }
     } catch (error) {
-        console.error('[CLOUDFLARE] Error during image deletion:', error.response ? error.response.data : error.message);
+        const errorData = error.response ? error.response.data : error.message;
+        console.error('[CLOUDFLARE] Error during image deletion:', JSON.stringify(errorData, null, 2));
         return false;
     }
 };

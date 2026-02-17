@@ -694,7 +694,11 @@ exports.uploadPublicStationImage = async (req, res) => {
         if (oldId) await deleteImage(oldId);
 
         // 2. Upload new image
-        const result = await uploadImage(req.file.buffer, `station_${id}_${Date.now()}`);
+        const result = await uploadImage(
+            req.file.buffer,
+            `station_${id}_${Date.now()}_${req.file.originalname}`,
+            req.file.mimetype
+        );
 
         // 3. Update DB
         // result.variants[0] is usually the public URL
@@ -721,7 +725,11 @@ exports.uploadPrivateChargerMedia = async (req, res) => {
         if (!charger) return res.status(404).json({ success: false, error: 'Charger not found' });
 
         // Upload to Cloudflare
-        const result = await uploadImage(req.file.buffer, `charger_${id}_${Date.now()}`);
+        const result = await uploadImage(
+            req.file.buffer,
+            `charger_${id}_${Date.now()}_${req.file.originalname}`,
+            req.file.mimetype
+        );
 
         // Save to ChargerMedia table
         // We use the record's ID from Cloudflare as the DB ID for easy tracking
