@@ -9,7 +9,7 @@ const ChargerMedia = require('./ChargerMedia');
 const PublicStation = require('./PublicStation');
 const ChargerDay = require('./ChargerDay');
 const {
-    City, State, Zipcode, NetworkType, FacilityType,
+    City, State, Country, Zipcode, NetworkType, FacilityType,
     ChargerTiming, Conversation, Message
 } = require('./ExtraModels');
 const {
@@ -84,6 +84,10 @@ PublicStation.belongsTo(City, { foreignKey: 'city_id', as: 'city' });
 PublicStation.belongsTo(Zipcode, { foreignKey: 'zipcode_id', as: 'zipcode' });
 PublicStation.belongsTo(NetworkType, { foreignKey: 'network_type_id', as: 'network' });
 PublicStation.belongsTo(FacilityType, { foreignKey: 'facility_type_id', as: 'facility' });
+PublicStation.belongsTo(Country, { foreignKey: 'countryId', as: 'country' });
+
+State.belongsTo(Country, { foreignKey: 'country_id', as: 'country' });
+Country.hasMany(State, { foreignKey: 'country_id', as: 'states' });
 
 // Social Proof
 PublicStation.hasMany(Checkin, { foreignKey: 'station_id', as: 'checkins' });
@@ -118,6 +122,6 @@ module.exports = {
     sequelize,
 
     User, ChargerListing, Booking, StationReview, ChargerMedia, PublicStation, ChargerDay,
-    City, State, Zipcode, NetworkType, FacilityType, ChargerTiming, Conversation, Message,
+    City, State, Country, Zipcode, NetworkType, FacilityType, ChargerTiming, Conversation, Message,
     Vehicle, Trip, Checkin, Favorite, ExtraService, PaymentMethod
 };

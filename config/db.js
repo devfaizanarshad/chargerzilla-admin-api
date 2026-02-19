@@ -13,11 +13,11 @@ const sequelize = new Sequelize(
         dialect: 'postgres',
         dialectModule: pg,
         port: process.env.DB_PORT || 5432,
-        logging: false, // Set to console.log to see SQL queries
+        logging: false, // Disabling logging to improve local performance
         dialectOptions: {
             ssl: {
                 require: true,
-                rejectUnauthorized: false // AWS RDS often requires this for SSL
+                rejectUnauthorized: false
             }
         },
         pool: {

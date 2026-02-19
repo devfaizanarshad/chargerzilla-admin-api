@@ -130,6 +130,9 @@ exports.getBookings = async (req, res) => {
 // Financial dashboard & status breakdown
 // OPTIMIZED: Single DB query instead of two
 // ==========================================
+// @desc    Financial dashboard & status breakdown
+// OPTIMIZED: Uses SQL aggregation instead of fetching all records
+// ==========================================
 exports.getBookingStats = async (req, res) => {
     try {
         const { date_from, date_to } = req.query;
@@ -141,123 +144,87 @@ exports.getBookingStats = async (req, res) => {
             if (date_to) dateFilter.arriveDate[sequelize.Op.lte] = date_to;
         }
 
-        // SINGLE query — fetch bookings + charger info together
-        const allBookings = await Booking.findAll({
+        // 1. Basic Counts and Financial Totals
+        const basicStats = await Booking.findOne({
             where: dateFilter,
-            attributes: ['charger_id', 'status', 'paymentStatus', 'subtotal', 'charges', 'totalHours', 'extras', 'createdAt', 'arriveDate'],
+            attributes: [
+                [sequelize.fn('COUNT', sequelize.col('id')), 'total_bookings'],
+                [sequelize.fn('SUM', sequelize.literal('CAST(subtotal AS DECIMAL)')), 'total_revenue'],
+                [sequelize.fn('SUM', sequelize.literal('CAST("totalHours" AS DECIMAL)')), 'total_hours_booked']
+            ],
+            raw: true
+        });
+
+        // 2. Status Breakdown
+        const statusData = await Booking.findAll({
+            where: dateFilter,
+            attributes: [
+                'status',
+                [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+            ],
+            group: ['status'],
+            raw: true
+        });
+
+        const statusBreakdown = {};
+        statusData.forEach(s => statusBreakdown[s.status] = parseInt(s.count));
+
+        // 3. Top Chargers (Limit to 5)
+        const topChargersData = await Booking.findAll({
+            where: dateFilter,
+            attributes: [
+                'charger_id',
+                [sequelize.fn('COUNT', sequelize.col('Booking.id')), 'bookings'],
+                [sequelize.fn('SUM', sequelize.literal('CAST(subtotal AS DECIMAL)')), 'revenue']
+            ],
             include: [{
                 model: ChargerListing,
                 as: 'charger',
                 attributes: ['title', 'address'],
                 required: false
-            }]
+            }],
+            group: ['charger_id', 'charger.id'],
+            order: [[sequelize.literal('bookings'), 'DESC']],
+            limit: 5,
+            raw: true,
+            nest: true
         });
 
-        // --- Process everything in memory from single result ---
-        const statusBreakdown = {};
-        const paymentBreakdown = {};
-        const chargerBookingCounts = {};
-        const monthlyTrend = {};
-
-        let totalRevenue = 0;
-        let totalBookingFees = 0;
-        let totalStripeFees = 0;
-        let totalExtrasRevenue = 0;
-        let totalHoursBooked = 0;
-        let completedBookings = 0;
-
-        allBookings.forEach(b => {
-            const plain = b.toJSON();
-
-            // Status counts
-            statusBreakdown[plain.status] = (statusBreakdown[plain.status] || 0) + 1;
-            paymentBreakdown[plain.paymentStatus] = (paymentBreakdown[plain.paymentStatus] || 0) + 1;
-
-            // Financial aggregation
-            totalRevenue += parseFloat(plain.subtotal) || 0;
-            totalHoursBooked += parseFloat(plain.totalHours) || 0;
-
-            if (plain.charges) {
-                totalBookingFees += parseFloat(plain.charges.bookingFee) || 0;
-                totalStripeFees += parseFloat(plain.charges.totalStripeFee) || 0;
-            }
-
-            // Extras revenue
-            if (plain.extras && Array.isArray(plain.extras)) {
-                plain.extras.forEach(extra => {
-                    if (extra.enabled !== false) {
-                        totalExtrasRevenue += parseFloat(extra.price) || 0;
-                    }
-                });
-            }
-
-            if (plain.paymentStatus === 'funds-released' || plain.paymentStatus === 'captured') {
-                completedBookings++;
-            }
-
-            // Monthly trend
-            const date = new Date(plain.createdAt);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            if (!monthlyTrend[monthKey]) {
-                monthlyTrend[monthKey] = { bookings: 0, revenue: 0 };
-            }
-            monthlyTrend[monthKey].bookings++;
-            monthlyTrend[monthKey].revenue += parseFloat(plain.subtotal) || 0;
-
-            // Top chargers
-            const cid = plain.charger_id;
-            if (!chargerBookingCounts[cid]) {
-                chargerBookingCounts[cid] = {
-                    charger_id: cid,
-                    title: plain.charger?.title || 'Unknown',
-                    address: plain.charger?.address || '',
-                    bookings: 0,
-                    revenue: 0
-                };
-            }
-            chargerBookingCounts[cid].bookings++;
-            chargerBookingCounts[cid].revenue += parseFloat(plain.subtotal) || 0;
+        // 4. Monthly Trend (Last 12 months)
+        const monthlyTrendData = await Booking.findAll({
+            where: dateFilter,
+            attributes: [
+                [sequelize.fn('TO_CHAR', sequelize.col('Booking.createdAt'), 'YYYY-MM'), 'month'],
+                [sequelize.fn('COUNT', sequelize.col('id')), 'bookings'],
+                [sequelize.fn('SUM', sequelize.literal('CAST(subtotal AS DECIMAL)')), 'revenue']
+            ],
+            group: [sequelize.fn('TO_CHAR', sequelize.col('Booking.createdAt'), 'YYYY-MM')],
+            order: [[sequelize.fn('TO_CHAR', sequelize.col('Booking.createdAt'), 'YYYY-MM'), 'ASC']],
+            limit: 12,
+            raw: true
         });
-
-        // Sort monthly trend by date
-        const sortedTrend = Object.entries(monthlyTrend)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([month, data]) => ({
-                month,
-                bookings: data.bookings,
-                revenue: Math.round(data.revenue * 100) / 100
-            }));
-
-        const topChargers = Object.values(chargerBookingCounts)
-            .sort((a, b) => b.bookings - a.bookings)
-            .slice(0, 5)
-            .map(c => ({ ...c, revenue: Math.round(c.revenue * 100) / 100 }));
 
         res.status(200).json({
             success: true,
             data: {
                 overview: {
-                    total_bookings: allBookings.length,
-                    completed_bookings: completedBookings,
-                    total_hours_booked: Math.round(totalHoursBooked * 100) / 100,
-                    completion_rate: allBookings.length > 0
-                        ? Math.round((completedBookings / allBookings.length) * 100) + '%'
-                        : '0%'
+                    total_bookings: parseInt(basicStats.total_bookings) || 0,
+                    total_revenue: parseFloat(basicStats.total_revenue) || 0,
+                    total_hours_booked: parseFloat(basicStats.total_hours_booked) || 0
                 },
                 status_breakdown: statusBreakdown,
-                payment_breakdown: paymentBreakdown,
-                financials: {
-                    total_revenue: Math.round(totalRevenue * 100) / 100,
-                    total_booking_fees: Math.round(totalBookingFees * 100) / 100,
-                    total_stripe_fees: Math.round(totalStripeFees * 100) / 100,
-                    total_extras_revenue: Math.round(totalExtrasRevenue * 100) / 100,
-                    net_platform_revenue: Math.round((totalBookingFees - totalStripeFees) * 100) / 100,
-                    average_booking_value: allBookings.length > 0
-                        ? Math.round((totalRevenue / allBookings.length) * 100) / 100
-                        : 0
-                },
-                monthly_trend: sortedTrend,
-                top_chargers: topChargers
+                monthly_trend: monthlyTrendData.map(m => ({
+                    month: m.month,
+                    bookings: parseInt(m.bookings),
+                    revenue: parseFloat(m.revenue)
+                })),
+                top_chargers: topChargersData.map(c => ({
+                    charger_id: c.charger_id,
+                    title: c.charger?.title || 'Unknown',
+                    address: c.charger?.address || '',
+                    bookings: parseInt(c.bookings),
+                    revenue: parseFloat(c.revenue)
+                }))
             }
         });
     } catch (error) {

@@ -57,6 +57,11 @@ const ChargerListing = sequelize.define('ChargerListing', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    networkType: { type: DataTypes.STRING, defaultValue: '' },
+    facilityType: { type: DataTypes.STRING, defaultValue: '' },
+    is24Hours: { type: DataTypes.BOOLEAN, defaultValue: false },
+    zipcode: { type: DataTypes.STRING },
+    nid: { type: DataTypes.STRING },
     createdAt: { type: DataTypes.DATE },
     updatedAt: { type: DataTypes.DATE }
 }, {

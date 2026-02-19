@@ -55,6 +55,45 @@ const upload = multer({ storage: multer.memoryStorage() });
  */
 router.get('/public', auth, stationController.getPublicStations);
 
+/**
+ * @swagger
+ * /api/admin/stations/public:
+ *   post:
+ *     summary: Create a new Public Station
+ *     tags: [Public Stations]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [station_name]
+ *             properties:
+ *               station_name: { type: string }
+ *               street_address: { type: string }
+ *               city_id: { type: integer }
+ *               countryId: { type: integer }
+ *               zipcode_id: { type: integer }
+ *               network_type_id: { type: integer }
+ *               facility_type_id: { type: integer }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *               online: { type: boolean }
+ *               status: { type: string }
+ *               pricing: { type: string }
+ *               access: { type: string }
+ *               total_ports: { type: integer }
+ *               level: { type: string }
+ *               chademo: { type: integer }
+ *               ccs: { type: integer }
+ *               tesla: { type: integer }
+ *               j1772: { type: integer }
+ *     responses:
+ *       201:
+ *         description: Station created successfully
+ */
+router.post('/public', auth, stationController.createPublicStation);
+
 // Lookup Routes
 /**
  * @swagger
@@ -265,6 +304,41 @@ router.delete('/public/:id/media', auth, stationController.deletePublicStationMe
  *         description: List of private chargers
  */
 router.get('/private', auth, stationController.getPrivateChargers);
+
+/**
+ * @swagger
+ * /api/admin/stations/private:
+ *   post:
+ *     summary: Create a new Private Charger
+ *     tags: [Private Chargers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, createdBy, address]
+ *             properties:
+ *               title: { type: string }
+ *               description: { type: string }
+ *               address: { type: string }
+ *               createdBy: { type: integer, description: "Host user ID" }
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               connectorType: { type: string }
+ *               powerOutput: { type: number }
+ *               voltage: { type: integer }
+ *               amperage: { type: integer }
+ *               pricePerHour: { type: number }
+ *               weekendPrice: { type: number }
+ *               amenities: { type: array, items: { type: string } }
+ *               facilities: { type: array, items: { type: string } }
+ *               published: { type: boolean }
+ *     responses:
+ *       201:
+ *         description: Charger created successfully
+ */
+router.post('/private', auth, stationController.createPrivateCharger);
 
 /**
  * @swagger

@@ -1,8 +1,9 @@
 const models = require('../../models');
 const { purgeCache, uploadImage, deleteImage } = require('../../utils/cloudflare');
+const crypto = require('crypto');
 const {
     ChargerListing, PublicStation, User, ChargerMedia, Booking, StationReview,
-    City, State, Zipcode, NetworkType, FacilityType, ChargerTiming, ChargerDay, Conversation, Message,
+    City, State, Country, Zipcode, NetworkType, FacilityType, ChargerTiming, ChargerDay, Conversation, Message,
     ExtraService, PaymentMethod, Checkin, sequelize
 } = models;
 
@@ -63,7 +64,8 @@ exports.getPublicStations = async (req, res) => {
             limit,
             offset,
             order: [['id', 'ASC']],
-            attributes: { exclude: ['city_id', 'zipcode_id', 'network_type_id', 'facility_type_id'] },
+            distinct: true, // Crucial for performance with includes
+            attributes: { exclude: ['city_id', 'zipcode_id', 'total_no_of_ports', 'countryId'] },
             include: [
                 { model: City, as: 'city', where: city_name ? cityWhereClause : undefined, attributes: ['id', 'city_name'] },
                 { model: NetworkType, as: 'network', where: network_name ? networkWhereClause : undefined, attributes: ['id', 'network_name'] },
@@ -100,17 +102,17 @@ exports.getPublicStationById = async (req, res) => {
     try {
         const { id } = req.params;
         const station = await PublicStation.findByPk(id, {
-            attributes: { exclude: ['city_id', 'zipcode_id', 'network_type_id', 'facility_type_id'] },
+            attributes: { exclude: [] },
             include: [
                 {
                     model: City,
                     as: 'city',
-                    attributes: ['city_name'],
-                    include: [{ model: State, as: 'state', attributes: ['state_name'] }]
+                    attributes: ['id', 'city_name'],
+                    include: [{ model: State, as: 'state', attributes: ['id', 'state_name'] }]
                 },
-                { model: NetworkType, as: 'network', attributes: ['network_name'] },
-                { model: FacilityType, as: 'facility', attributes: ['facility_name'] },
-                { model: Zipcode, as: 'zipcode', attributes: ['zipcode'] },
+                { model: NetworkType, as: 'network', attributes: ['id', 'network_name'] },
+                { model: FacilityType, as: 'facility', attributes: ['id', 'facility_name'] },
+                { model: Zipcode, as: 'zipcode', attributes: ['id', 'zipcode'] },
                 { model: PaymentMethod, as: 'paymentMethods', through: { attributes: [] } }
             ]
         });
@@ -141,8 +143,12 @@ exports.getPublicStationById = async (req, res) => {
             location: {
                 address: plain.street_address,
                 city: plain.city ? plain.city.city_name : null,
+                city_id: plain.city_id,
                 state: plain.city && plain.city.state ? plain.city.state.state_name : null,
+                state_id: plain.city && plain.city.state ? plain.city.state.id : null,
                 zip: plain.zipcode ? plain.zipcode.zipcode : null,
+                zipcode_id: plain.zipcode_id,
+                country_id: plain.countryId,
                 coordinates: {
                     lat: plain.latitude,
                     lng: plain.longitude
@@ -253,7 +259,7 @@ exports.updatePublicStation = async (req, res) => {
             'total_ports', 'level', 'chademo', 'ccs', 'tesla', 'j1772', 'nema1450',
             'nema515', 'nema520', 'chademo_power', 'ccs_power', 'tesla_power',
             'j1772_power', 'latitude', 'longitude', 'station_image',
-            'network_type_id', 'facility_type_id'
+            'network_type_id', 'facility_type_id', 'city_id', 'zipcode_id', 'countryId'
         ];
 
         editableFields.forEach(field => {
@@ -278,6 +284,77 @@ exports.updatePublicStation = async (req, res) => {
     } catch (error) {
         console.error('Error updating public station:', error);
         res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
+const resolveMetadata = async (tableName, nameField, value, parentField = null, parentId = null) => {
+    if (!value) return null;
+    if (Number.isInteger(value)) return value; // Already an ID
+
+    const model = models[tableName];
+    if (!model) return null;
+
+    const where = { [nameField]: { [sequelize.Op.iLike]: value.trim() } };
+    if (parentField && parentId) where[parentField] = parentId;
+
+    const [record] = await model.findOrCreate({
+        where,
+        defaults: { [nameField]: value.trim(), ...(parentField && { [parentField]: parentId }) }
+    });
+    return record.id;
+};
+
+exports.createPublicStation = async (req, res) => {
+    try {
+        const body = req.body;
+
+        // Resolve Hierarchy: Country -> State -> City
+        let countryId = body.countryId;
+        if (body.country_name) {
+            countryId = await resolveMetadata('Country', 'country_name', body.country_name);
+        }
+
+        let stateId = body.state_id;
+        if (body.state_name && countryId) {
+            stateId = await resolveMetadata('State', 'state_name', body.state_name, 'country_id', countryId);
+        }
+
+        let cityId = body.city_id;
+        if (body.city_name && stateId) {
+            cityId = await resolveMetadata('City', 'city_name', body.city_name, 'state_id', stateId);
+        }
+
+        // Resolve Flat Metadata
+        const networkId = body.network_name ?
+            await resolveMetadata('NetworkType', 'network_name', body.network_name) :
+            body.network_type_id;
+
+        const facilityId = body.facility_name ?
+            await resolveMetadata('FacilityType', 'facility_name', body.facility_name) :
+            body.facility_type_id;
+
+        const zipcodeId = body.zipcode_value ?
+            await resolveMetadata('Zipcode', 'zipcode', body.zipcode_value) :
+            body.zipcode_id;
+
+        const station = await PublicStation.create({
+            ...body,
+            countryId: countryId || body.countryId,
+            city_id: cityId || body.city_id,
+            zipcode_id: zipcodeId || body.zipcode_id,
+            network_type_id: networkId || body.network_type_id,
+            facility_type_id: facilityId || body.facility_type_id,
+            station_image: body.image_url || body.station_image,
+            status: body.status || 'Active',
+            online: body.online !== undefined ? body.online : true
+        });
+
+        try { await purgeCache(); } catch (e) { console.error('Cache purge failed'); }
+
+        res.status(201).json({ success: true, data: station, message: 'Public station created (with metadata resolution)' });
+    } catch (error) {
+        console.error('Error creating public station:', error);
+        res.status(500).json({ success: false, error: 'Server error', detail: error.message });
     }
 };
 
@@ -410,7 +487,9 @@ exports.getPrivateChargerById = async (req, res) => {
                     published: plain.published,
                     disabled: plain.disabled,
                     draft: plain.draft
-                }
+                },
+                network: plain.networkType,
+                facility: plain.facilityType
             },
             location: {
                 address: plain.address,
@@ -530,6 +609,7 @@ exports.updatePrivateCharger = async (req, res) => {
             if (body.address !== undefined) charger.address = body.address;
             if (body.lat !== undefined) charger.lat = body.lat;
             if (body.lng !== undefined) charger.lng = body.lng;
+            if (body.zipcode !== undefined) charger.zipcode = body.zipcode;
         }
 
         // 3. Pricing
@@ -581,7 +661,27 @@ exports.updatePrivateCharger = async (req, res) => {
             charger.facilities = body.facilities;
         }
 
-        // 6. Generic Fields
+        // 6. Metadata/Generic Fields
+        if (body.createdBy) charger.createdBy = body.createdBy;
+        if (body.is24Hours !== undefined) charger.is24Hours = body.is24Hours;
+
+        // 7. Resolve Network & Facility names if IDs are provided
+        const networkId = (body.identity && body.identity.network_type_id) || body.network_type_id;
+        if (networkId) {
+            const nt = await NetworkType.findByPk(networkId);
+            if (nt) charger.networkType = nt.network_name;
+        } else if (body.networkType !== undefined) {
+            charger.networkType = body.networkType;
+        }
+
+        const facilityId = (body.identity && body.identity.facility_type_id) || body.facility_type_id;
+        if (facilityId) {
+            const ft = await FacilityType.findByPk(facilityId);
+            if (ft) charger.facilityType = ft.facility_name;
+        } else if (body.facilityType !== undefined) {
+            charger.facilityType = body.facilityType;
+        }
+
         const genericFields = ['deleted', 'disabled', 'published', 'draft', 'access'];
         genericFields.forEach(field => {
             if (body[field] !== undefined) charger[field] = body[field];
@@ -610,6 +710,134 @@ exports.updatePrivateChargerStatus = async (req, res) => {
     } catch (error) {
         console.error('Error updating charger status:', error);
         res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
+exports.createPrivateCharger = async (req, res) => {
+    try {
+        const body = req.body;
+        console.log('--- CREATE PRIVATE CHARGER START ---');
+        console.log('Body:', JSON.stringify(body, null, 2));
+
+        const id = crypto.randomBytes(11).toString('hex'); // 22 characters
+
+        // Prepare data object for creation
+        const chargerData = {
+            id,
+            deleted: false
+        };
+
+        // 1. Identity & Description
+        if (body.identity) {
+            if (body.identity.title !== undefined) chargerData.title = body.identity.title;
+            if (body.identity.description !== undefined) chargerData.description = body.identity.description;
+            if (body.identity.status) {
+                if (body.identity.status.published !== undefined) chargerData.published = body.identity.status.published;
+                if (body.identity.status.disabled !== undefined) chargerData.disabled = body.identity.status.disabled;
+                if (body.identity.status.draft !== undefined) chargerData.draft = body.identity.status.draft;
+            }
+        } else {
+            // Fallback for flat identity fields
+            if (body.title !== undefined) chargerData.title = body.title;
+            if (body.description !== undefined) chargerData.description = body.description;
+        }
+
+        // Defaults for status if not provided
+        if (chargerData.published === undefined) chargerData.published = body.published !== undefined ? body.published : true;
+        if (chargerData.draft === undefined) chargerData.draft = body.draft !== undefined ? body.draft : false;
+        if (chargerData.disabled === undefined) chargerData.disabled = body.disabled !== undefined ? body.disabled : false;
+
+        // 2. Location
+        if (body.location) {
+            if (body.location.address !== undefined) chargerData.address = body.location.address;
+            if (body.location.coordinates) {
+                if (body.location.coordinates.lat !== undefined) chargerData.lat = body.location.coordinates.lat;
+                if (body.location.coordinates.lng !== undefined) chargerData.lng = body.location.coordinates.lng;
+            }
+        } else {
+            // Fallback for flat location fields
+            if (body.address !== undefined) chargerData.address = body.address;
+            if (body.lat !== undefined) chargerData.lat = body.lat;
+            if (body.lng !== undefined) chargerData.lng = body.lng;
+        }
+
+        // 3. Pricing
+        if (body.pricing) {
+            if (body.pricing.hourly !== undefined) chargerData.pricePerHour = body.pricing.hourly;
+            if (body.pricing.weekend !== undefined) chargerData.weekendPrice = body.pricing.weekend;
+            if (body.pricing.cancellation_policy !== undefined) chargerData.cancellationPolicy = body.pricing.cancellation_policy;
+        } else {
+            // Fallback for flat pricing fields
+            if (body.pricePerHour !== undefined) chargerData.pricePerHour = body.pricePerHour;
+            if (body.weekendPrice !== undefined) chargerData.weekendPrice = body.weekendPrice;
+            if (body.cancellationPolicy !== undefined) chargerData.cancellationPolicy = body.cancellationPolicy;
+        }
+
+        // 4. Specs
+        if (body.specs) {
+            if (body.specs.connector_type !== undefined) chargerData.connectorType = body.specs.connector_type;
+            if (body.specs.power_output_kw !== undefined) chargerData.powerOutput = body.specs.power_output_kw;
+            if (body.specs.voltage !== undefined) chargerData.voltage = body.specs.voltage;
+            if (body.specs.amperage !== undefined) chargerData.amperage = body.specs.amperage;
+            if (body.specs.ports) {
+                if (body.specs.ports.l2 !== undefined) chargerData.NumofLevel2Chargers = body.specs.ports.l2;
+                if (body.specs.ports.dc !== undefined) chargerData.NumofDCFastChargers = body.specs.ports.dc;
+            }
+        } else {
+            // Fallback for flat specs fields
+            if (body.connectorType !== undefined) chargerData.connectorType = body.connectorType;
+            if (body.powerOutput !== undefined) chargerData.powerOutput = body.powerOutput;
+            if (body.voltage !== undefined) chargerData.voltage = body.voltage;
+            if (body.amperage !== undefined) chargerData.amperage = body.amperage;
+            if (body.NumofLevel2Chargers !== undefined) chargerData.NumofLevel2Chargers = body.NumofLevel2Chargers;
+            if (body.NumofDCFastChargers !== undefined) chargerData.NumofDCFastChargers = body.NumofDCFastChargers;
+        }
+
+        // 5. Amenities & Facilities
+        if (body.amenities) {
+            if (body.amenities.list !== undefined) {
+                chargerData.amenities = body.amenities.list;
+            } else if (Array.isArray(body.amenities)) {
+                chargerData.amenities = body.amenities;
+            }
+
+            if (body.amenities.facilities !== undefined) {
+                chargerData.facilities = body.amenities.facilities;
+            }
+        }
+        if (body.facilities !== undefined && Array.isArray(body.facilities)) {
+            chargerData.facilities = body.facilities;
+        }
+
+        // 6. Metadata/Generic Fields
+        if (body.createdBy) chargerData.createdBy = body.createdBy;
+        if (body.is24Hours !== undefined) chargerData.is24Hours = body.is24Hours;
+        if (body.zipcode !== undefined) chargerData.zipcode = body.zipcode;
+
+        // 7. Resolve Network & Facility names if IDs are provided
+        const networkId = (body.identity && body.identity.network_type_id) || body.network_type_id;
+        if (networkId) {
+            const nt = await NetworkType.findByPk(networkId);
+            if (nt) chargerData.networkType = nt.network_name;
+        } else if (body.networkType !== undefined) {
+            chargerData.networkType = body.networkType;
+        }
+
+        const facilityId = (body.identity && body.identity.facility_type_id) || body.facility_type_id;
+        if (facilityId) {
+            const ft = await FacilityType.findByPk(facilityId);
+            if (ft) chargerData.facilityType = ft.facility_name;
+        } else if (body.facilityType !== undefined) {
+            chargerData.facilityType = body.facilityType;
+        }
+
+        const charger = await ChargerListing.create(chargerData);
+
+        console.log('--- CREATE PRIVATE CHARGER SUCCESS ---');
+        res.status(201).json({ success: true, data: charger, message: 'Private charger created successfully' });
+    } catch (error) {
+        console.error('Error creating private charger:', error);
+        res.status(500).json({ success: false, error: 'Server error', detail: error.message });
     }
 };
 

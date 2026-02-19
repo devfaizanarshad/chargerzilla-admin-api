@@ -1,4 +1,10 @@
 const axios = require('axios');
+const https = require('https');
+
+// Create an HTTPS agent that can ignore SSL errors if NODE_ENV is development
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: process.env.NODE_ENV !== 'production' ? false : true
+});
 
 /**
  * Purge Cloudflare cache for the configured zone.
@@ -25,7 +31,8 @@ const purgeCache = async () => {
                     'X-Auth-Email': email,
                     'X-Auth-Key': apiKey,
                     'Content-Type': 'application/json'
-                }
+                },
+                httpsAgent
             }
         );
 
@@ -70,7 +77,8 @@ const uploadImage = async (fileBuffer, fileName, mimeType = 'image/jpeg') => {
                 headers: {
                     'X-Auth-Email': email,
                     'X-Auth-Key': apiKey,
-                }
+                },
+                httpsAgent
             }
         );
 
@@ -110,7 +118,8 @@ const deleteImage = async (imageId) => {
                 headers: {
                     'X-Auth-Email': email,
                     'X-Auth-Key': apiKey,
-                }
+                },
+                httpsAgent
             }
         );
 

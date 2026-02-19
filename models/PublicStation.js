@@ -26,6 +26,10 @@ const PublicStation = sequelize.define('PublicStation', {
     facility_type_id: {
         type: DataTypes.INTEGER
     },
+    countryId: {
+        type: DataTypes.INTEGER,
+        field: 'countryId'
+    },
     // Images
     station_image: {
         type: DataTypes.STRING

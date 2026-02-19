@@ -9,6 +9,11 @@ const City = sequelize.define('City', {
     state_id: { type: DataTypes.INTEGER }
 }, { tableName: 'cities', freezeTableName: true, underscored: true, timestamps: false });
 
+const Country = sequelize.define('Country', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    country_name: { type: DataTypes.STRING }
+}, { tableName: 'countries', freezeTableName: true, underscored: true, timestamps: false });
+
 const State = sequelize.define('State', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     state_name: { type: DataTypes.STRING },
@@ -59,6 +64,7 @@ const Message = sequelize.define('Message', {
 module.exports = {
     City,
     State,
+    Country,
     Zipcode,
     NetworkType,
     FacilityType,
